@@ -1,0 +1,3 @@
+Campus Connect is a centralized web platform designed to help students stay informed and actively involved in campus life.
+It allows students to discover upcoming events, club activities, and hackathons, while enabling club heads and administrators to post, manage, and approve events through role-based access.
+The platform also supports hackathon team formation, where students can find teammates based on skills and interests within the campus. By bringing students, clubs, and opportunities onto a single platform, Campus Connect improves communication, participation, and overall engagement in campus activities.
