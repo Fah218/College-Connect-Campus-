@@ -15,7 +15,11 @@ export default function SignupPage() {
     department: '',
     year: '',
     skills: [],
+    interests: [],
+    profileImage: '',
+    phone: '',
     clubName: '',
+    clubDescription: '',
     adminCode: ''
   })
   const [error, setError] = useState('')
@@ -52,9 +56,16 @@ export default function SignupPage() {
         password: formData.password,
         role: roleMapping[formData.role],
         department: formData.department || 'General',
+        year: formData.role === 'student' ? formData.year : undefined,
+        skills: formData.role === 'student' ? formData.skills : undefined,
+        interests: formData.role === 'student' ? formData.interests : undefined,
+        profileImage: formData.profileImage || undefined,
+        phone: formData.phone || undefined,
         rollNumber: formData.role === 'student' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
         employeeId: formData.role === 'admin' ? 'EMP' + Math.floor(Math.random() * 100000) : undefined,
         clubName: formData.role === 'club_head' ? formData.clubName : undefined,
+        clubDescription: formData.role === 'club_head' ? formData.clubDescription : undefined,
+        contactNumber: formData.role === 'club_head' ? formData.phone : undefined,
         studentId: formData.role === 'club_head' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
       };
 
@@ -228,22 +239,104 @@ export default function SignupPage() {
                   />
                   <p className="text-xs text-gray-500 mt-1">Enter your skills separated by commas</p>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Interests (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    onChange={(e) => {
+                      const interests = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                      setFormData({ ...formData, interests })
+                    }}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="AI, Web Dev, UI/UX"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profile Image URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.profileImage}
+                      onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number (optional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
               </>
             )}
 
             {formData.role === 'club_head' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Club Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.clubName}
-                  onChange={(e) => setFormData({ ...formData, clubName: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="e.g. Coding Club"
-                  required={formData.role === 'club_head'}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Club Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.clubName}
+                    onChange={(e) => setFormData({ ...formData, clubName: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g. Coding Club"
+                    required={formData.role === 'club_head'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Club Description
+                  </label>
+                  <textarea
+                    value={formData.clubDescription}
+                    onChange={(e) => setFormData({ ...formData, clubDescription: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Briefly describe the club's mission and activities"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profile Image / Logo URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.profileImage}
+                      onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="https://example.com/logo.jpg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contact Number (optional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 

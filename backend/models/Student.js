@@ -6,6 +6,11 @@ const studentSchema = new mongoose.Schema({
   password: { type: String, required: true },
   rollNumber: { type: String, required: true, unique: true },
   department: { type: String, required: true },
+  year: { type: String },
+  skills: [{ type: String }],
+  interests: [{ type: String }],
+  profileImage: { type: String },
+  phone: { type: String },
   role: { type: String, default: 'Student' }
 }, { timestamps: true });
 

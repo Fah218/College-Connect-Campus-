@@ -5,6 +5,9 @@ const clubHeadSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   clubName: { type: String, required: true, unique: true },
+  clubDescription: { type: String },
+  profileImage: { type: String },
+  contactNumber: { type: String },
   studentId: { type: String, required: true },
   role: { type: String, default: 'ClubHead' }
 }, { timestamps: true });
