@@ -11,6 +11,9 @@ import HackathonDetails from './pages/HackathonDetails'
 import TeammateFinder from './pages/TeammateFinder'
 import EventRegistrationPage from './pages/EventRegistrationPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import StudentProfilePage from './pages/StudentProfilePage'
+import AdminProfilePage from './pages/AdminProfilePage'
+import ClubHeadProfilePage from './pages/ClubHeadProfilePage'
 
 function App() {
   return (
@@ -25,16 +28,31 @@ function App() {
             <StudentDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/student/profile" element={
+          <ProtectedRoute role="student">
+            <StudentProfilePage />
+          </ProtectedRoute>
+        } />
         
         <Route path="/club-head" element={
           <ProtectedRoute role="club_head">
             <ClubHeadDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/club-head/profile" element={
+          <ProtectedRoute role="club_head">
+            <ClubHeadProfilePage />
+          </ProtectedRoute>
+        } />
         
         <Route path="/admin" element={
           <ProtectedRoute role="admin">
             <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <ProtectedRoute role="admin">
+            <AdminProfilePage />
           </ProtectedRoute>
         } />
         

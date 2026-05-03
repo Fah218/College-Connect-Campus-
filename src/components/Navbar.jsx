@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { GraduationCap, LogOut, User } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import { useState } from 'react'
-import StudentProfile from './StudentProfile'
+
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore()
@@ -14,6 +14,7 @@ export default function Navbar() {
     logout()
     navigate('/')
   }
+
 
   return (
     <>
@@ -30,7 +31,11 @@ export default function Navbar() {
                 <>
                   <NotificationBell />
                   <button
-                    onClick={() => setShowProfile(true)}
+                    onClick={() => {
+                      if (user?.role === 'admin' || user?.role === 'Admin') navigate('/admin/profile')
+                      else if (user?.role === 'club_head' || user?.role === 'ClubHead') navigate('/club-head/profile')
+                      else navigate('/student/profile')
+                    }}
                     className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
                   >
                     <User size={18} />
@@ -59,9 +64,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {showProfile && (
-        <StudentProfile user={user} onClose={() => setShowProfile(false)} />
-      )}
     </>
   )
 }
