@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { GraduationCap } from 'lucide-react'
+import axios from 'axios'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -12,19 +13,32 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const login = useAuthStore(state => state.login)
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     
-    // Mock login - no backend needed
-    setTimeout(() => {
-      const userData = {
-        id: Date.now(),
-        name: email.split('@')[0],
+    try {
+      const roleMapping = {
+        student: 'Student',
+        admin: 'Admin',
+        club_head: 'ClubHead'
+      };
+
+      const payload = {
         email,
-        role,
-        skills: ['React', 'Python', 'Machine Learning']
+        password,
+        role: roleMapping[role],
+      };
+
+      const response = await axios.post('http://localhost:5001/api/auth/login', payload);
+      
+      const userData = {
+        id: response.data.user._id,
+        name: response.data.user.name,
+        email: response.data.user.email,
+        role: role,
+        skills: response.data.user.skills || ['React', 'Python', 'Machine Learning']
       }
       
       login(userData)
@@ -36,8 +50,11 @@ export default function LoginPage() {
         admin: '/admin'
       }
       navigate(routes[role])
+    } catch (err) {
+       setError(err.response?.data?.message || 'Error occurred during login. Please check credentials and role.');
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
   
   return (
@@ -112,7 +129,10 @@ export default function LoginPage() {
           </form>
           
           <p className="text-center text-sm text-gray-600 mt-6">
-            Demo: Use any email/password to login
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign up here
+            </Link>
           </p>
         </div>
       </div>

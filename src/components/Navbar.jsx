@@ -9,12 +9,12 @@ export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [showProfile, setShowProfile] = useState(false)
-  
+
   const handleLogout = () => {
     logout()
     navigate('/')
   }
-  
+
   return (
     <>
       <nav className="bg-white shadow-sm border-b">
@@ -24,7 +24,7 @@ export default function Navbar() {
               <GraduationCap size={28} />
               CampusConnect
             </Link>
-            
+
             <div className="flex items-center gap-4">
               {isAuthenticated ? (
                 <>
@@ -45,15 +45,20 @@ export default function Navbar() {
                   </button>
                 </>
               ) : (
-                <Link to="/login" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                  Login
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link to="/login" className="px-4 py-2 text-primary-600 font-medium hover:text-primary-700">
+                    Login
+                  </Link>
+                  <Link to="/signup" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors">
+                    Sign Up
+                  </Link>
+                </div>
               )}
             </div>
           </div>
         </div>
       </nav>
-      
+
       {showProfile && (
         <StudentProfile user={user} onClose={() => setShowProfile(false)} />
       )}
