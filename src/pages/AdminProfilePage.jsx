@@ -3,6 +3,7 @@ import { User, Users, Calendar, ShieldCheck, Activity, Edit, CheckCircle, XCircl
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
+import ProfileEditForm from '../components/ProfileEditForm'
 
 export default function AdminProfilePage() {
   const { user } = useAuthStore()
@@ -26,19 +27,27 @@ export default function AdminProfilePage() {
           </div>
           
           <div className="p-6 space-y-8">
+            {isEditing && <ProfileEditForm onCancel={() => setIsEditing(false)} />}
+            
             {/* 👤 Basic Info */}
             <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center">
-                <ShieldCheck size={48} className="text-red-600" />
+              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ShieldCheck size={48} className="text-red-600" />
+                )}
               </div>
               <div className="flex-1">
                 <h3 className="text-2xl font-bold mb-2">{user?.name || 'Admin User'}</h3>
-                <p className="text-gray-600 mb-1">{user?.email}</p>
+                <p className="text-gray-600 mb-1 flex items-center gap-2">
+                  {user?.email} {user?.phone && <span>• {user.phone}</span>}
+                </p>
                 <p className="text-red-600 font-medium bg-red-50 inline-block px-3 py-1 rounded-full text-sm">Role: Administrator</p>
               </div>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 shrink-0"
               >
                 <Edit size={16} />
                 Edit Profile

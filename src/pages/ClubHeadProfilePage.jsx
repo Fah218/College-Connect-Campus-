@@ -3,6 +3,7 @@ import { User, Calendar, CheckCircle, Clock, XCircle, Users, Trophy, TrendingUp,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
+import ProfileEditForm from '../components/ProfileEditForm'
 
 export default function ClubHeadProfilePage() {
   const { user } = useAuthStore()
@@ -25,23 +26,44 @@ export default function ClubHeadProfilePage() {
           </div>
           
           <div className="p-6 space-y-8">
-            {/* 👤 Basic Info */}
-            <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center">
-                <User size={48} className="text-primary-600" />
+            {isEditing && <ProfileEditForm onCancel={() => setIsEditing(false)} />}
+            
+            {/* 👤 Basic Info & Club Details */}
+            <div className="flex flex-col md:flex-row items-start gap-6 bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+              <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User size={48} className="text-primary-600" />
+                )}
               </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold mb-2">{user?.name || 'Club Head User'}</h3>
-                <p className="text-gray-600 mb-1 font-medium">{user?.clubName || 'Tech Club'}</p>
-                <p className="text-primary-600 font-medium bg-primary-50 inline-block px-3 py-1 rounded-full text-sm mt-1">Role: Club Head</p>
+              <div className="flex-1 w-full">
+                <div className="flex justify-between items-start w-full">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-2">{user?.name || 'Club Head User'}</h3>
+                    <p className="text-gray-600 mb-1 flex items-center gap-2">
+                      {user?.email} {user?.contactNumber && <span>• {user.contactNumber}</span>}
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg mb-2">{user?.clubName || 'Tech Club'}</p>
+                    <p className="text-primary-600 font-medium bg-primary-50 inline-block px-3 py-1 rounded-full text-sm">Role: Club Head</p>
+                  </div>
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 shrink-0"
+                  >
+                    <Edit size={16} />
+                    Edit Profile
+                  </button>
+                </div>
+                
+                {/* Club Description */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Club Description</h4>
+                  <p className="text-gray-700 leading-relaxed">
+                    {user?.clubDescription || 'We are a community of passionate individuals dedicated to exploring technology, organizing hackathons, and fostering innovation on campus.'}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
-              >
-                <Edit size={16} />
-                Edit Profile
-              </button>
             </div>
 
             {/* 📊 Event Stats */}

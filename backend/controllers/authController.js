@@ -103,3 +103,33 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ message: 'Server error during login', error: error.message });
   }
 };
+
+export const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { role, password, ...updates } = req.body;
+  
+  try {
+    let user;
+    if (role === 'student' || role === 'Student') {
+      user = await Student.findByIdAndUpdate(id, updates, { new: true });
+    } else if (role === 'admin' || role === 'Admin') {
+      user = await Admin.findByIdAndUpdate(id, updates, { new: true });
+    } else if (role === 'club_head' || role === 'ClubHead') {
+      user = await ClubHead.findByIdAndUpdate(id, updates, { new: true });
+    } else {
+      return res.status(400).json({ message: 'Invalid role provided for update.' });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const userToReturn = user.toObject();
+    delete userToReturn.password;
+
+    res.status(200).json({ message: 'Profile updated successfully', user: userToReturn });
+  } catch (error) {
+    console.error('Update Error:', error);
+    res.status(500).json({ message: 'Server error during update', error: error.message });
+  }
+};

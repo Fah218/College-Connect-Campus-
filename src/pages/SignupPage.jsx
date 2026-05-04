@@ -99,6 +99,22 @@ export default function SignupPage() {
     setFormData({ ...formData, skills })
   }
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Optional: Add a size check here (e.g., 2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image size must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, profileImage: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white flex items-center justify-center px-4 py-8">
       <div className="max-w-2xl w-full">
@@ -258,14 +274,13 @@ export default function SignupPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile Image URL (optional)
+                      Profile Image (optional)
                     </label>
                     <input
-                      type="url"
-                      value={formData.profileImage}
-                      onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="https://example.com/image.jpg"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
                     />
                   </div>
                   <div>
@@ -314,14 +329,13 @@ export default function SignupPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile Image / Logo URL (optional)
+                      Profile Image / Logo (optional)
                     </label>
                     <input
-                      type="url"
-                      value={formData.profileImage}
-                      onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="https://example.com/logo.jpg"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
                     />
                   </div>
                   <div>
