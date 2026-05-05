@@ -16,12 +16,17 @@ export const useAuthStore = create(
         user: { ...state.user, ...updates }
       })),
       
-      addNotification: (notification) => set((state) => ({
-        notifications: [
-          { ...notification, id: Date.now(), timestamp: new Date().toISOString(), read: false },
-          ...state.notifications
-        ]
-      })),
+      addNotification: (notification) => set((state) => {
+        // Deduplicate: if a notification with same id already exists, skip it
+        const newId = notification.id || Date.now()
+        if (state.notifications.some(n => n.id === newId)) return {}
+        return {
+          notifications: [
+            { ...notification, id: newId, timestamp: new Date().toISOString(), read: false },
+            ...state.notifications
+          ]
+        }
+      }),
       
       markNotificationRead: (id) => set((state) => ({
         notifications: state.notifications.map(n => 

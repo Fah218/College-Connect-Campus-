@@ -8,13 +8,16 @@ import EventCard from '../components/EventCard'
 import StatCard from '../components/StatCard'
 import RecommendedSection from '../components/RecommendedSection'
 import Timeline from '../components/Timeline'
-import { Calendar, Trophy, Users, Filter, Layout, List } from 'lucide-react'
+import { Calendar, Trophy, Users, Filter, Layout, List, Bell, CalendarCheck, BellOff, CalendarX } from 'lucide-react'
+import { useCalendarStore } from '../store/calendarStore'
+import { format } from 'date-fns'
 
 export default function StudentDashboard() {
   const { events, registeredEvents, registerForEvent } = useEventStore()
   const { hackathons } = useHackathonStore()
   const { getRecommendedEvents } = useRecommendationStore()
   const { addNotification } = useAuthStore()
+  const { reminders, calendarItems, removeReminder, removeCalendarItem } = useCalendarStore()
   const [filter, setFilter] = useState({ category: 'all', search: '' })
   const [view, setView] = useState('list')
   
@@ -81,6 +84,76 @@ export default function StudentDashboard() {
           />
         </div>
         
+        {/* ── My Reminders & Calendar Panel ── */}
+        {(reminders.length > 0 || calendarItems.length > 0) && (
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Reminders */}
+            {reminders.length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+                <h3 className="flex items-center gap-2 text-yellow-800 font-bold text-base mb-4">
+                  <Bell size={18} className="text-yellow-500" />
+                  My Reminders
+                  <span className="ml-auto px-2 py-0.5 bg-yellow-200 text-yellow-800 text-xs rounded-full font-semibold">
+                    {reminders.length}
+                  </span>
+                </h3>
+                <div className="space-y-2">
+                  {reminders.map(r => (
+                    <div key={r.eventId} className="flex items-center justify-between bg-white border border-yellow-100 rounded-lg px-4 py-2.5 shadow-sm">
+                      <div>
+                        <p className="font-semibold text-sm text-gray-800 truncate max-w-[200px]">{r.eventTitle}</p>
+                        <p className="text-xs text-red-500 mt-0.5">
+                          ⏳ Deadline: {r.deadline ? format(new Date(r.deadline), 'MMM d, yyyy') : 'TBA'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeReminder(r.eventId)}
+                        className="ml-3 p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                        title="Remove reminder"
+                      >
+                        <BellOff size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Calendar Items */}
+            {calendarItems.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                <h3 className="flex items-center gap-2 text-green-800 font-bold text-base mb-4">
+                  <CalendarCheck size={18} className="text-green-500" />
+                  My Calendar
+                  <span className="ml-auto px-2 py-0.5 bg-green-200 text-green-800 text-xs rounded-full font-semibold">
+                    {calendarItems.length}
+                  </span>
+                </h3>
+                <div className="space-y-2">
+                  {calendarItems.map(c => (
+                    <div key={c.eventId} className="flex items-center justify-between bg-white border border-green-100 rounded-lg px-4 py-2.5 shadow-sm">
+                      <div>
+                        <p className="font-semibold text-sm text-gray-800 truncate max-w-[200px]">{c.eventTitle}</p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          📅 {c.date ? format(new Date(c.date), 'MMM d, yyyy') : 'TBA'}
+                          {c.time && ` at ${c.time}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeCalendarItem(c.eventId)}
+                        className="ml-3 p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                        title="Remove from calendar"
+                      >
+                        <CalendarX size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Recommended Section */}
         <RecommendedSection
           recommendations={recommendations}

@@ -18,7 +18,7 @@ export default function HomePage() {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/hackathons" className="px-8 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition">
+            <Link to="/explore-events" className="px-8 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition">
               Explore Events
             </Link>
             <Link to="/hackathons" className="px-8 py-3 bg-white text-primary-600 border-2 border-primary-600 rounded-lg font-medium hover:bg-primary-50 transition">

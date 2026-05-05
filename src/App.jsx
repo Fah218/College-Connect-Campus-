@@ -14,10 +14,11 @@ import ProtectedRoute from './components/ProtectedRoute'
 import StudentProfilePage from './pages/StudentProfilePage'
 import AdminProfilePage from './pages/AdminProfilePage'
 import ClubHeadProfilePage from './pages/ClubHeadProfilePage'
+import ExploreEventsPage from './pages/ExploreEventsPage'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/campus-connect">
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -56,6 +57,7 @@ function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/explore-events" element={<ExploreEventsPage />} />
         <Route path="/hackathons" element={<HackathonPage />} />
         <Route path="/hackathons/:id" element={<HackathonDetails />} />
         <Route path="/teammate-finder" element={<TeammateFinder />} />
