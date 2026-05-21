@@ -9,7 +9,10 @@ import { format, isValid } from 'date-fns'
 
 function safeFormat(d, f = 'MMM dd, yyyy') {
   if (!d) return 'TBA'
-  try { const dt = new Date(d); return isValid(dt) ? format(dt, f) : 'TBA' } catch { return 'TBA' }
+  try {
+    const dt = new Date(d)
+    return isValid(dt) ? format(dt, f) : 'TBA'
+  } catch { return 'TBA' }
 }
 
 const ROLES = ['Frontend','Backend','Full-Stack','ML Engineer','Designer','DevOps','Mobile Dev']
@@ -24,336 +27,263 @@ export default function HackathonDetails() {
 
   const [showTeamSection, setShowTeamSection] = useState(false)
   const [showPostForm, setShowPostForm]       = useState(false)
-  const [showInbox, setShowInbox]             = useState(true)   // open by default so A sees requests
+  const [showInbox, setShowInbox]             = useState(true)
   const [joinMsg, setJoinMsg]                 = useState({})
   const [registered, setRegistered]           = useState(false)
   const syncedNotifIds = useRef(new Set())
 
-  // resolve hackathon
-  const ev = events.find(e => String(e.id) === String(id) && e.category === 'Hackathon')
-  const hk = store.hackathons.find(h => String(h.id) === String(id) || String(h._id) === String(id))
+  // Strip prefixes (ev- or st-) if present for searching
+  const cleanId = id?.replace(/^(ev-|st-)/, '')
+
+  // Find hackathon from either store
+  const ev = (events || []).find(e => String(e.id) === String(cleanId) && e.category === 'Hackathon')
+  const hk = (store.hackathons || []).find(h => String(h.id) === String(cleanId) || String(h._id) === String(cleanId))
   const raw = ev || hk
-  if (!raw) return (
-    <div className="min-h-screen bg-gray-50"><Navbar />
-      <div className="flex flex-col items-center justify-center py-32 text-gray-400">
-        <Trophy size={48} className="mb-3 opacity-20" />
-        <p className="text-lg font-semibold">Hackathon not found</p>
-        <button onClick={() => navigate(-1)} className="mt-3 text-primary-600 hover:underline text-sm">← Go back</button>
+
+  if (!raw) {
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center py-32 text-gray-400">
+          <Trophy size={48} className="mb-3 opacity-20" />
+          <p className="text-lg font-semibold">Hackathon not found</p>
+          <button onClick={() => navigate('/hackathons')} className="mt-3 text-primary-600 hover:underline">← All Hackathons</button>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const h = {
     id: String(raw.id || raw._id),
-    title: raw.title,
+    title: raw.title || 'Untitled Hackathon',
     shortDesc: raw.shortDescription || '',
     description: raw.description || '',
     date: raw.startDate || raw.date,
     endDate: raw.endDate,
+    time: raw.startTime || raw.time,
+    endTime: raw.endTime,
     deadline: raw.registrationDeadlineDate || raw.deadline,
     deadlineTime: raw.registrationDeadlineTime,
-    teamSize: raw.maxTeamSize ? `Up to ${raw.maxTeamSize}` : raw.teamSize || 'Team',
+    teamSize: raw.maxTeamSize ? `Up to ${raw.maxTeamSize}` : (raw.teamSize || 'Team'),
+    location: raw.location || raw.college || 'TBA',
+    venueLink: raw.venueLink || raw.platformLink,
+    mode: raw.mode || 'Offline',
     maxParticipants: raw.maxParticipants || raw.capacity,
-    location: raw.location || raw.college,
-    mode: raw.mode,
     tags: raw.tags || (raw.domain ? [raw.domain] : []),
-    prize: raw.prize, bannerImage: raw.bannerImage, club: raw.club,
+    prize: raw.prize,
+    bannerImage: raw.bannerImage,
+    club: raw.club,
   }
 
-  const requests    = store.getTeamRequestsForHackathon(h.id)
-  const myTeam      = user ? store.getMyTeamForHackathon(h.id, user.id) : null
-  const myJoinReqs  = user ? store.getMyJoinRequests(user.id).filter(j => j.hackathonId === h.id) : []
-  const ownerInbox  = user ? store.joinRequests.filter(jr =>
+  const requests = store.getTeamRequestsForHackathon?.(h.id) || []
+  const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id) : null
+  const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id) || []).filter(j => String(j.hackathonId) === h.id) : []
+  const ownerInbox = user ? (store.joinRequests || []).filter(jr => 
     requests.some(r => r._id === jr.teamRequestId && String(r.owner?.id) === String(user.id))
   ) : []
   const pendingInbox = ownerInbox.filter(j => j.status === 'pending')
 
-  // ── Sync ALL hackathon-store notifications → authStore Navbar bell ──────────
-  // Covers BOTH User A (join requests) and User B (accept/reject updates)
-  const allMyHackNotifs = user ? store.getUserNotifications(user.id) : []
-  useEffect(() => {
-    if (!user?.id) return
-    allMyHackNotifs.forEach(n => {
-      if (!syncedNotifIds.current.has(n.id)) {
-        syncedNotifIds.current.add(n.id)
-        addNotification({
-          title:    n.type === 'join_request' ? '🔔 New Join Request'
-                  : n.type === 'accepted'     ? '✅ Team Request Accepted'
-                  : '❌ Team Request Update',
-          message:  n.text,
-          priority: n.type === 'join_request' ? 'high' : 'medium',
-          id:       n.id
-        })
-        store.markUserNotifRead(user.id, n.id)
-      }
-    })
-  }, [allMyHackNotifs.length])
-
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
     setRegistered(true)
-    addNotification({ title: 'Team Registered!', message: `Registered for ${h.title}`, priority: 'high' })
+    addNotification({ title: 'Success!', message: `Registered for ${h.title}`, priority: 'high' })
   }
 
   const handleSendJoin = (reqId) => {
     if (!isAuthenticated) { navigate('/login'); return }
     const msg = joinMsg[reqId] || ''
-    store.sendJoinRequest(reqId, {
+    store.sendJoinRequest?.(reqId, {
       id: user.id, name: user.name, email: user.email,
       skills: user.skills || [], department: user.department, year: user.year
     }, msg)
-    // Notify User B (the sender) via authStore — shows in their Navbar bell
-    addNotification({ title: 'Request Sent ✅', message: 'Your join request was sent to the team owner!', priority: 'medium' })
-    setJoinMsg(prev => ({ ...prev, [reqId]: '' }))
+    addNotification({ title: 'Request Sent', message: 'Join request sent!', priority: 'medium' })
+    setJoinMsg(p => ({ ...p, [reqId]: '' }))
   }
-
-  const handleAccept = (jrId) => {
-    store.acceptJoinRequest(jrId)
-    // The acceptJoinRequest already pushes a hackathon-store notification for User B.
-    // We also push it to the current user's authStore for the Navbar.
-    addNotification({ title: 'Member Added ✅', message: 'Teammate accepted and added to your team!', priority: 'high' })
-  }
-
-  const handleReject = (jrId) => {
-    store.rejectJoinRequest(jrId)
-    addNotification({ title: 'Request Rejected', message: 'Join request rejected.', priority: 'low' })
-  }
-
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      {h.bannerImage
-        ? <img src={h.bannerImage} alt={h.title} className="w-full h-52 object-cover" />
-        : <div className="w-full h-14 bg-gradient-to-r from-primary-500 to-blue-700" />}
-
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-
-        {/* ── Info Card ── */}
-        <div className="bg-white rounded-2xl shadow-sm border p-8">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-xs font-semibold">Hackathon</span>
-                {h.mode && <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{h.mode}</span>}
-                {h.club && <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">by {h.club}</span>}
-              </div>
-              <h1 className="text-3xl font-extrabold text-gray-900">{h.title}</h1>
-              {h.shortDesc && <p className="text-gray-500 italic mt-1">{h.shortDesc}</p>}
+      
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Banner */}
+        <div className="rounded-2xl overflow-hidden mb-6 shadow-sm border h-48 bg-gray-200">
+          {h.bannerImage ? (
+            <img src={h.bannerImage} className="w-full h-full object-cover" alt={h.title} />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-primary-600 to-blue-800 flex items-center justify-center">
+              <Trophy size={64} className="text-white opacity-20" />
             </div>
-            <Trophy size={48} className="text-yellow-500 shrink-0 ml-4" />
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4 mt-6">
-            {h.date && <InfoCard icon={Calendar} label="Start Date" value={safeFormat(h.date)} />}
-            {h.deadline && <InfoCard icon={Clock} label="Reg. Deadline" value={`${safeFormat(h.deadline)}${h.deadlineTime ? ' at ' + h.deadlineTime : ''}`} highlight />}
+          )}
+        </div>
+
+        {/* Info Grid */}
+        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+          <h1 className="text-3xl font-extrabold mb-4">{String(h.title)}</h1>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <InfoCard icon={Calendar} label="Starts" value={`${safeFormat(h.date)}${h.time ? ' at ' + h.time : ''}`} />
+            {h.endDate && <InfoCard icon={Calendar} label="Ends" value={`${safeFormat(h.endDate)}${h.endTime ? ' at ' + h.endTime : ''}`} />}
+            <InfoCard icon={Clock} label="Deadline" value={`${safeFormat(h.deadline)}${h.deadlineTime ? ' at ' + h.deadlineTime : ''}`} highlight />
             <InfoCard icon={Users} label="Team Size" value={h.teamSize} />
-            {h.location && <InfoCard icon={MapPin} label="Location" value={h.location} />}
-            {h.maxParticipants && <InfoCard icon={Users} label="Max Participants" value={h.maxParticipants} />}
-            {h.prize && <InfoCard icon={Award} label="Prize Pool" value={h.prize} />}
+            <InfoCard icon={MapPin} label="Location" value={`${h.location} (${h.mode})`} />
+            {h.venueLink && <InfoCard icon={MapPin} label="Venue Link" value={h.venueLink} />}
+            {h.maxParticipants && <InfoCard icon={Users} label="Capacity" value={h.maxParticipants} />}
+            {h.prize && <InfoCard icon={Award} label="Prize" value={h.prize} />}
           </div>
           {h.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t">
-              {h.tags.map(t => (
-                <span key={t} className="flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-100">
-                  <Tag size={11} />{t}
+            <div className="flex flex-wrap gap-2 mt-6">
+              {h.tags.map((t, idx) => (
+                <span key={idx} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs border border-primary-100">
+                  {String(t)}
                 </span>
               ))}
             </div>
           )}
         </div>
 
-        {/* ── Description ── */}
-        {h.description && (
-          <div className="bg-white rounded-2xl shadow-sm border p-8">
-            <h2 className="text-xl font-bold mb-3">About this Hackathon</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{h.description}</p>
+        {/* Description Section */}
+        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+          <h2 className="text-xl font-bold mb-4">About this Hackathon</h2>
+          {h.shortDesc && (
+            <p className="text-gray-600 font-medium italic mb-4 border-l-4 border-primary-400 pl-4">
+              {String(h.shortDesc)}
+            </p>
+          )}
+          <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {String(h.description || "No description provided.")}
           </div>
-        )}
+        </div>
 
-        {/* ── Team Section ── */}
-        <div className="bg-white rounded-2xl shadow-sm border p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">👥 Team Section</h2>
-            {isAuthenticated && pendingInbox.length > 0 && (
-              <button onClick={() => setShowInbox(v => !v)}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-xl font-semibold text-sm hover:bg-yellow-100">
-                <Bell size={16} /> {pendingInbox.length} Join Request{pendingInbox.length > 1 ? 's' : ''}
-              </button>
-            )}
+        {/* Team Actions */}
+        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+          <h2 className="text-xl font-bold mb-6">Teammate Finder</h2>
+          
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <button onClick={handleRegister} disabled={registered}
+              className={`flex-1 py-3 rounded-xl font-bold transition ${registered ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+              {registered ? '✓ Registered' : 'Register Team'}
+            </button>
+            <button onClick={() => setShowTeamSection(!showTeamSection)}
+              className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700">
+              {showTeamSection ? 'Hide Finder' : 'Find Teammates'}
+            </button>
           </div>
 
-          {/* Inbox for team owner */}
+          {/* Inbox for User A */}
           {showInbox && pendingInbox.length > 0 && (
-            <div className="mb-6 space-y-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <h3 className="font-bold text-yellow-800 mb-3">📬 Join Requests (Pending)</h3>
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <h3 className="font-bold text-yellow-800 mb-3 flex items-center gap-2"><Bell size={18} /> New Requests</h3>
               {pendingInbox.map(jr => (
-                <div key={jr._id} className="flex items-center justify-between bg-white border rounded-xl p-4 gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900">{jr.sender?.name}</p>
-                    <p className="text-xs text-gray-500">{jr.sender?.department} · {jr.sender?.year}</p>
-                    {jr.sender?.skills?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {jr.sender.skills.slice(0, 4).map(s => (
-                          <span key={s} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{s}</span>
-                        ))}
-                      </div>
-                    )}
-                    {jr.message && <p className="text-sm text-gray-600 mt-1.5 italic">"{jr.message}"</p>}
+                <div key={jr._id} className="bg-white border rounded-lg p-3 mb-2 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm">{jr.sender?.name}</p>
+                    <p className="text-xs text-gray-500">{jr.message}</p>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => handleAccept(jr._id)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 flex items-center gap-1">
-                      <CheckCircle size={14} /> Accept
-                    </button>
-                    <button onClick={() => handleReject(jr._id)}
-                      className="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200 flex items-center gap-1">
-                      <X size={14} /> Reject
-                    </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => store.acceptJoinRequest?.(jr._id)} className="px-3 py-1 bg-green-600 text-white text-xs rounded-md">Accept</button>
+                    <button onClick={() => store.rejectJoinRequest?.(jr._id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded-md">Reject</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* My Team (if already in one) */}
+          {/* My Team Display */}
           {myTeam && (
-            <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl">
-              <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
-                <CheckCircle size={18} className="text-green-600" />
-                Your Team: {myTeam.teamName || 'My Team'}
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {myTeam.members?.map((m, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-white border border-green-100 rounded-lg p-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                      {m.name?.charAt(0)}
+            <div className="mb-6 p-4 bg-primary-50 border border-primary-100 rounded-xl">
+              <div className="flex justify-between items-center mb-3">
+                <p className="font-bold text-primary-800">My Team: {myTeam.teamName || 'Team'}</p>
+                <div className="px-2 py-1 bg-primary-600 text-white text-[10px] rounded font-bold uppercase">Active</div>
+              </div>
+              
+              <div className="space-y-2">
+                {(myTeam.members || []).map((m, idx) => m && (
+                  <div key={m.id || m._id || idx} className="flex items-center justify-between bg-white border border-primary-100 rounded-lg p-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-[10px] font-bold">
+                        {String(m.name || '?').charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-800">{String(m.name || 'Unknown')}</p>
+                        <p className="text-[10px] text-gray-500">{m.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm">{m.name}</p>
-                      <p className="text-xs text-gray-400">{m.email}</p>
-                    </div>
-                    {i === 0 && <span className="ml-auto text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium">Owner</span>}
+                    {m.id === myTeam.owner?.id ? (
+                      <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold uppercase">Lead</span>
+                    ) : (
+                      <a href={`mailto:${m.email}`} className="text-[10px] text-primary-600 hover:underline font-medium">Contact</a>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
+
           )}
 
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <button onClick={handleRegister} disabled={registered}
-              className={`flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition
-                ${registered ? 'bg-green-100 text-green-700 border-2 border-green-300 cursor-default' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'}`}>
-              <CheckCircle size={20} />
-              {registered ? 'Team Registered ✓' : 'Register Team'}
-            </button>
-            <button onClick={() => setShowTeamSection(v => !v)}
-              className={`flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition border-2
-                ${showTeamSection ? 'bg-primary-50 border-primary-400 text-primary-700' : 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700 shadow-md'}`}>
-              <Search size={20} />
-              {showTeamSection ? 'Hide Teammates' : 'Find Teammates'}
-              {showTeamSection ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-            </button>
-          </div>
-
-          {/* ── Expanded Teammate Section ── */}
+          {/* List of Requests */}
           {showTeamSection && (
-            <div className="border-t pt-6 space-y-6">
-
-              {/* Open Requests */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold">📢 Open Team Requests</h3>
-                  {isAuthenticated && !myTeam && (
-                    <button onClick={() => setShowPostForm(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700">
-                      <Plus size={16} /> Post Request
-                    </button>
-                  )}
-                </div>
-
-                {requests.length === 0 ? (
-                  <div className="text-center py-10 border-2 border-dashed rounded-xl text-gray-400">
-                    <p className="font-medium">No team requests yet</p>
-                    <p className="text-sm mt-1">Be the first to post!</p>
-                    {isAuthenticated && !myTeam && (
-                      <button onClick={() => setShowPostForm(true)}
-                        className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold">
-                        Post a Request
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {requests.map(req => {
-                      const isOwner  = String(req.owner?.id) === String(user?.id)
-                      const myJR     = myJoinReqs.find(j => j.teamRequestId === req._id)
-                      // User B is a member if they appear in req.members (added after accept)
-                      const isMember = !isOwner && req.members?.some(m => String(m.id) === String(user?.id))
-
-                      return (
-                        <div key={req._id} className="border rounded-xl p-5 hover:border-primary-300 transition bg-gray-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              {req.teamName && <p className="font-bold text-primary-700 text-base">{req.teamName}</p>}
-                              <p className="text-xs text-gray-400 mt-0.5">by {req.owner?.name}</p>
-                            </div>
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                              {req.members?.length || 1} member{req.members?.length !== 1 ? 's' : ''}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-3">{req.description}</p>
-
-                          {req.requiredRoles?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              <span className="text-xs font-semibold text-gray-500 mr-1">Looking for:</span>
-                              {req.requiredRoles.map((r, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-                                  {r.count ? `${r.count}× ` : ''}{r.role || r}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {req.requiredSkills?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mb-3">
-                              {req.requiredSkills.map(s => (
-                                <span key={s} className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">{s}</span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Action */}
-                          {isOwner ? (
-                            <p className="text-xs text-primary-600 font-semibold">✓ Your team request</p>
-                          ) : isMember ? (
-                            <p className="text-xs text-green-600 font-semibold">✓ You are a member</p>
-                          ) : myJR ? (
-                            <span className={`text-xs font-semibold px-3 py-1 rounded-full inline-block ${
-                              myJR.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                              myJR.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'}`}>
-                              {myJR.status === 'accepted' ? '✅ Accepted' : myJR.status === 'rejected' ? '❌ Not accepted' : '⏳ Request sent'}
-                            </span>
-                          ) : (
-                            <div className="flex gap-2 mt-2">
-                              <textarea
-                                value={joinMsg[req._id] || ''}
-                                onChange={e => setJoinMsg(p => ({ ...p, [req._id]: e.target.value }))}
-                                placeholder="Why are you a good fit? (optional)"
-                                className="flex-1 px-3 py-2 border rounded-lg text-sm resize-none"
-                                rows={2}
-                              />
-                              <button onClick={() => handleSendJoin(req._id)}
-                                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 self-end">
-                                Request to Join
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold">Team Requests</h3>
+                {!myTeam && <button onClick={() => setShowPostForm(true)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg font-bold">Post Request</button>}
               </div>
+              {requests.map(req => {
+                const isOwner = user?.id && req.owner?.id && String(req.owner.id) === String(user.id)
+                const isMember = user?.id && (req.members || []).some(m => m && String(m.id || m._id || '') === String(user.id))
+                const myJR = user?.id && myJoinReqs.find(j => j.teamRequestId === req._id)
+
+                return (
+                  <div key={req._id} className="border rounded-xl p-4 bg-gray-50 hover:border-primary-200 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-gray-900">{String(req.teamName || 'Unnamed Team')}</p>
+                      <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
+                        Request
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-3">{String(req.description)}</p>
+
+                    {/* Roles Needed */}
+                    {req.requiredRoles?.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Roles Needed</p>
+                        <div className="flex flex-wrap gap-2">
+                          {req.requiredRoles.map((r, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-primary-50 text-primary-700 rounded-md text-[11px] font-bold border border-primary-100">
+                              {r.role} ({r.count})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Skills Needed */}
+                    {req.requiredSkills?.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Skills Preferred</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {req.requiredSkills.map((s, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-md text-[10px] font-medium border border-purple-100">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-3 pt-3 border-t">
+
+                      {isOwner ? <span className="text-xs font-bold text-primary-600">Your Post</span> :
+                       isMember ? <span className="text-xs font-bold text-green-600">✓ You are in this team</span> :
+                       myJR ? <span className="text-xs font-bold text-yellow-600">⏳ Request {myJR.status}</span> :
+                       <div className="flex gap-2">
+                         <input value={joinMsg[req._id] || ''} onChange={e => setJoinMsg(p => ({...p, [req._id]: e.target.value}))} placeholder="Message..." className="flex-1 px-3 py-1.5 border rounded-lg text-xs" />
+                         <button onClick={() => handleSendJoin(req._id)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg">Join</button>
+                       </div>}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -361,8 +291,6 @@ export default function HackathonDetails() {
 
       {showPostForm && (
         <PostRequestModal
-          hackathonId={h.id}
-          user={user}
           onClose={() => setShowPostForm(false)}
           onSubmit={(data) => {
             store.addTeamRequest({ ...data, hackathonId: h.id, owner: { id: user.id, name: user.name, email: user.email } })
@@ -375,93 +303,149 @@ export default function HackathonDetails() {
   )
 }
 
-function InfoCard({ icon: Icon, label, value, highlight }) {
+function PostRequestModal({ onClose, onSubmit }) {
+  const [form, setForm] = useState({
+    teamName: '',
+    description: '',
+    requiredRoles: [],
+    requiredSkills: []
+  })
+
+  const toggleRole = (role) => {
+    setForm(prev => {
+      const exists = prev.requiredRoles.find(r => r.role === role)
+      if (exists) {
+        return { ...prev, requiredRoles: prev.requiredRoles.filter(r => r.role !== role) }
+      }
+      return { ...prev, requiredRoles: [...prev.requiredRoles, { role, count: 1 }] }
+    })
+  }
+
+  const updateRoleCount = (role, count) => {
+    setForm(prev => ({
+      ...prev,
+      requiredRoles: prev.requiredRoles.map(r => r.role === role ? { ...r, count: parseInt(count) || 1 } : r)
+    }))
+  }
+
+  const toggleSkill = (skill) => {
+    setForm(prev => ({
+      ...prev,
+      requiredSkills: prev.requiredSkills.includes(skill)
+        ? prev.requiredSkills.filter(s => s !== skill)
+        : [...prev.requiredSkills, skill]
+    }))
+  }
+
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl border ${highlight ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-transparent'}`}>
-      <div className={`p-2 rounded-lg shrink-0 ${highlight ? 'bg-red-100' : 'bg-primary-100'}`}>
-        <Icon size={18} className={highlight ? 'text-red-600' : 'text-primary-600'} />
-      </div>
-      <div>
-        <p className={`text-xs font-semibold uppercase tracking-wider ${highlight ? 'text-red-500' : 'text-gray-400'}`}>{label}</p>
-        <p className="font-semibold text-gray-800 mt-0.5">{value}</p>
-      </div>
-    </div>
-  )
-}
-
-function PostRequestModal({ onClose, onSubmit, user }) {
-  const [form, setForm] = useState({ teamName: '', description: '', requiredRoles: [], requiredSkills: [] })
-
-  const toggleRole = (role) => setForm(p => ({
-    ...p,
-    requiredRoles: p.requiredRoles.find(r => r.role === role)
-      ? p.requiredRoles.filter(r => r.role !== role)
-      : [...p.requiredRoles, { role, count: 1 }]
-  }))
-
-  const toggleSkill = (s) => setForm(p => ({
-    ...p,
-    requiredSkills: p.requiredSkills.includes(s) ? p.requiredSkills.filter(x => x !== s) : [...p.requiredSkills, s]
-  }))
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-xl font-bold">Post Team Request</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Post Team Request</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={20} />
+          </button>
         </div>
-        <div className="space-y-4">
+
+        <div className="space-y-5">
+          {/* Team Name */}
           <div>
-            <label className="block text-sm font-medium mb-1">Team Name (optional)</label>
-            <input value={form.teamName} onChange={e => setForm(p => ({ ...p, teamName: e.target.value }))}
-              placeholder="e.g. MERN Wizards" className="w-full px-4 py-2 border rounded-lg text-sm" />
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Team Name (Optional)</label>
+            <input
+              type="text"
+              value={form.teamName}
+              onChange={e => setForm({ ...form, teamName: e.target.value })}
+              placeholder="e.g. Code Wizards"
+              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+            />
           </div>
+
+          {/* Roles */}
           <div>
-            <label className="block text-sm font-medium mb-1">Description *</label>
-            <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="What are you building? Who do you need?" className="w-full px-4 py-2 border rounded-lg text-sm" rows={3} required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Required Roles</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Required Roles</label>
             <div className="flex flex-wrap gap-2">
-              {ROLES.map(r => {
-                const active = form.requiredRoles.find(x => x.role === r)
+              {ROLES.map(role => {
+                const active = form.requiredRoles.find(r => r.role === role)
                 return (
-                  <div key={r} className="flex items-center gap-1">
-                    <button type="button" onClick={() => toggleRole(r)}
-                      className={`px-3 py-1 rounded-lg text-sm transition ${active ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                      {r}
+                  <div key={role} className="flex items-center gap-1">
+                    <button
+                      onClick={() => toggleRole(role)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 hover:border-primary-400'
+                      }`}
+                    >
+                      {role}
                     </button>
                     {active && (
-                      <input type="number" min={1} max={5} value={active.count}
-                        onChange={e => setForm(p => ({ ...p, requiredRoles: p.requiredRoles.map(x => x.role === r ? { ...x, count: parseInt(e.target.value) || 1 } : x) }))}
-                        className="w-10 text-center border rounded text-sm px-1 py-0.5" />
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={active.count}
+                        onChange={e => updateRoleCount(role, e.target.value)}
+                        className="w-12 px-1 py-1 text-center border rounded-lg text-xs font-bold"
+                      />
                     )}
                   </div>
                 )
               })}
             </div>
           </div>
+
+          {/* Skills */}
           <div>
-            <label className="block text-sm font-medium mb-2">Skills Needed</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Skills Needed</label>
             <div className="flex flex-wrap gap-2">
-              {SKILLS.map(s => (
-                <button key={s} type="button" onClick={() => toggleSkill(s)}
-                  className={`px-3 py-1 rounded-lg text-sm transition ${form.requiredSkills.includes(s) ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                  {s}
+              {SKILLS.map(skill => (
+                <button
+                  key={skill}
+                  onClick={() => toggleSkill(skill)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    form.requiredSkills.includes(skill)
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-white text-gray-600 hover:border-purple-400'
+                  }`}
+                >
+                  {skill}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex gap-3 pt-3 border-t">
-            <button onClick={onClose} className="flex-1 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-50 font-medium text-sm">Cancel</button>
-            <button onClick={() => { if (form.description.trim()) onSubmit(form) }}
-              className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 text-sm">
-              Post Request
-            </button>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              placeholder="Tell us what you're building and who you're looking for..."
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none h-28 resize-none"
+              required
+            />
           </div>
+
+          <button
+            onClick={() => {
+              if (form.description.trim()) onSubmit(form)
+            }}
+            className="w-full py-3.5 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all active:scale-[0.98]"
+          >
+            Submit Request
+          </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+
+function InfoCard({ icon: Icon, label, value, highlight }) {
+  return (
+    <div className={`p-4 rounded-xl border flex items-center gap-3 ${highlight ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-transparent'}`}>
+      <div className={`p-2 rounded-lg ${highlight ? 'bg-red-100 text-red-600' : 'bg-primary-100 text-primary-600'}`}><Icon size={18} /></div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
+        <p className="font-bold text-gray-800">{String(value || 'TBA')}</p>
       </div>
     </div>
   )

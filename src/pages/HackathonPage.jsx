@@ -22,10 +22,11 @@ export default function HackathonPage() {
 
   // Merge real events that have category === 'Hackathon' with the mock hackathon store
   const eventHackathons = useMemo(() =>
-    events
+    (events || [])
       .filter(e => e.status === 'approved' && e.category === 'Hackathon')
       .map(e => ({
-        id:          e.id,
+        id:          `ev-${e.id}`, // Prefix to avoid key collisions
+        realId:      e.id,
         title:       e.title,
         description: e.shortDescription || e.description,
         date:        e.startDate || e.date,
@@ -42,9 +43,10 @@ export default function HackathonPage() {
       })),
   [events])
 
-  // Also include mock hackathons from hackathonStore (they have domain, prize etc.)
-  const storeHackathons = hackathons.map(h => ({
-    id:          h.id,
+  // Also include mock hackathons from hackathonStore
+  const storeHackathons = (hackathons || []).map(h => ({
+    id:          `st-${h.id}`, // Prefix to avoid key collisions
+    realId:      h.id,
     title:       h.title,
     description: h.description,
     date:        h.date,
@@ -57,6 +59,8 @@ export default function HackathonPage() {
   }))
 
   const all = [...eventHackathons, ...storeHackathons]
+
+
 
   const allTags = useMemo(() => {
     const tags = new Set()

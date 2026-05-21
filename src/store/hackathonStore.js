@@ -50,27 +50,30 @@ export const useHackathonStore = create(
       // ── Helpers ────────────────────────────────────────────────────────────
       getTeamRequestsForHackathon: (hackathonId) => {
         const id = String(hackathonId)
-        return get().teamRequests.filter(r => String(r.hackathonId) === id)
+        return (get().teamRequests || []).filter(r => String(r.hackathonId) === id)
       },
 
       getJoinRequestsForOwner: (userId) =>
-        get().joinRequests.filter(jr =>
-          get().teamRequests.find(tr =>
+        (get().joinRequests || []).filter(jr =>
+          (get().teamRequests || []).find(tr =>
             tr._id === jr.teamRequestId && String(tr.owner?.id) === String(userId)
           )
         ),
 
       getMyJoinRequests: (userId) =>
-        get().joinRequests.filter(jr => String(jr.sender?.id) === String(userId)),
+        (get().joinRequests || []).filter(jr => String(jr.sender?.id) === String(userId)),
 
-      getMyTeamForHackathon: (hackathonId, userId) =>
-        get().teamRequests.find(tr =>
+      getMyTeamForHackathon: (hackathonId, userId) => {
+        if (!userId) return null;
+        return (get().teamRequests || []).find(tr =>
           String(tr.hackathonId) === String(hackathonId) &&
-          tr.members?.some(m => String(m.id) === String(userId))
-        ),
+          (tr.members || []).some(m => m && (String(m.id || m._id || '') === String(userId)))
+        );
+      },
 
       getUserNotifications: (userId) =>
-        get().userNotifications[String(userId)] || [],
+        (get().userNotifications || {})[String(userId)] || [],
+
 
       // ── Actions ────────────────────────────────────────────────────────────
 

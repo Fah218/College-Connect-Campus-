@@ -1,16 +1,39 @@
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useHackathonStore } from '../store/hackathonStore'
 import { GraduationCap, LogOut, User } from 'lucide-react'
 import NotificationBell from './NotificationBell'
-import { useState } from 'react'
-
 
 export default function Navbar() {
-  const { isAuthenticated, user, logout } = useAuthStore()
+  const { isAuthenticated, user, logout, addNotification } = useAuthStore()
+  const store = useHackathonStore()
   const navigate = useNavigate()
   const [showProfile, setShowProfile] = useState(false)
+  const syncedNotifIds = useRef(new Set())
+
+  // Global Sync: Hackathon Store Notifs -> Auth Store Navbar Bell
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return
+    const allNotifs = store.getUserNotifications?.(user.id) || []
+    if (allNotifs.length === 0) return
+
+    allNotifs.forEach(n => {
+      if (!syncedNotifIds.current.has(n.id)) {
+        syncedNotifIds.current.add(n.id)
+        addNotification({
+          title: n.type === 'join_request' ? '🔔 New Join Request' : '✅ Team Request Accepted',
+          message: n.text,
+          priority: 'high',
+          id: n.id
+        })
+        store.markUserNotifRead?.(user.id, n.id)
+      }
+    })
+  }, [store.userNotifications, user?.id, isAuthenticated])
 
   const handleLogout = () => {
+
     logout()
     navigate('/')
   }
