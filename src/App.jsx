@@ -18,7 +18,7 @@ import ExploreEventsPage from './pages/ExploreEventsPage'
 
 function App() {
   return (
-    <BrowserRouter basename="/campus-connect">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
