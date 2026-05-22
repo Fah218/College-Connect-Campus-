@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import axios from 'axios'
 
 export const useEventStore = create(
   persist(
@@ -58,26 +59,45 @@ export const useEventStore = create(
       registeredEvents: [],
       auditLogs: [],
       
-      addEvent: (event) => {
-        const newEvent = { 
-          ...event, 
-          id: Date.now(), 
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          attendees: 0
+      addEvent: async (event) => {
+        const payload = {
+          ...event,
+          clubName: event.club || 'Tech Club',
+          shortDescription: event.shortDescription || 'No description provided',
+          description: event.description || 'No description provided',
+          registrationDeadlineDate: event.registrationDeadlineDate || new Date().toISOString().split('T')[0],
+          registrationDeadlineTime: event.registrationDeadlineTime || '23:59',
+          location: event.location || 'TBA',
+          category: event.category || 'Workshop',
+          status: 'pending'
+        };
+
+        try {
+          const response = await axios.post('http://localhost:5001/api/events/create', payload);
+          const dbEvent = response.data.event;
+          
+          const newEvent = { 
+            ...dbEvent, 
+            id: dbEvent._id,
+            attendees: 0
+          }
+          
+          set((state) => ({
+            events: [...state.events, newEvent],
+            auditLogs: [...state.auditLogs, {
+              id: Date.now(),
+              action: 'created',
+              eventId: newEvent.id,
+              eventTitle: newEvent.title,
+              timestamp: new Date().toISOString(),
+              user: 'Club Head'
+            }]
+          }))
+          return newEvent
+        } catch (error) {
+          console.error("Error saving event to database:", error);
+          throw error;
         }
-        set((state) => ({
-          events: [...state.events, newEvent],
-          auditLogs: [...state.auditLogs, {
-            id: Date.now(),
-            action: 'created',
-            eventId: newEvent.id,
-            eventTitle: newEvent.title,
-            timestamp: new Date().toISOString(),
-            user: 'Club Head'
-          }]
-        }))
-        return newEvent
       },
       
       updateEvent: (id, updates) => set((state) => ({

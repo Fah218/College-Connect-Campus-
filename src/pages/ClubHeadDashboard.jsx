@@ -25,7 +25,7 @@ export default function ClubHeadDashboard() {
   const pendingEvents = myEvents.filter(e => e.status === 'pending')
   const approvedEvents = myEvents.filter(e => e.status === 'approved')
   
-  const handleSubmit = (formData) => {
+  const handleSubmit = async (formData) => {
     if (editingEvent) {
       updateEvent(editingEvent.id, formData)
       addNotification({
@@ -34,12 +34,20 @@ export default function ClubHeadDashboard() {
         priority: 'low'
       })
     } else {
-      const newEvent = addEvent({ ...formData, club: 'Tech Club' })
-      addNotification({
-        title: 'Event Created',
-        message: `${formData.title} has been submitted for approval`,
-        priority: 'medium'
-      })
+      try {
+        await addEvent({ ...formData, club: 'Tech Club' })
+        addNotification({
+          title: 'Event Created',
+          message: `${formData.title} has been submitted for approval`,
+          priority: 'medium'
+        })
+      } catch (error) {
+        addNotification({
+          title: 'Error',
+          message: 'Failed to create event in database.',
+          priority: 'high'
+        })
+      }
     }
     setShowModal(false)
     setEditingEvent(null)

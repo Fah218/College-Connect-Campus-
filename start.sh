@@ -11,7 +11,7 @@ sleep 2
 
 # Start backend
 echo "🚀 Starting Backend Server..."
-cd server
+cd backend
 npm run dev &
 BACKEND_PID=$!
 cd ..
