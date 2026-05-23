@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import axios from 'axios'
 
 export const useHackathonStore = create(
   persist(
@@ -78,27 +79,43 @@ export const useHackathonStore = create(
       // ── Actions ────────────────────────────────────────────────────────────
 
       /** User A: Post a team request */
-      addTeamRequest: (data) => {
-        const newReq = {
-          _id:           Date.now().toString(),
-          hackathonId:   String(data.hackathonId),
-          teamName:      data.teamName || '',
-          description:   data.description,
-          requiredRoles: data.requiredRoles || [],   // [{role:'Frontend',count:1}, ...]
-          requiredSkills: data.requiredSkills || [],
-          owner:         data.owner,                 // {id, name, email}
-          members:       [data.owner],               // owner is first member
-          joinRequests:  [],
-          status:        'open',
-          createdAt:     new Date().toISOString()
+      addTeamRequest: async (data) => {
+        try {
+          const payload = {
+            hackathonId: String(data.hackathonId || 'unknown'),
+            title: data.title || data.teamName || 'Untitled Team Request',
+            description: data.description || 'No description provided',
+            roles: Array.isArray(data.roles) ? data.roles : (Array.isArray(data.requiredRoles) ? data.requiredRoles.map(r => r.role || r) : []),
+            skills: data.skills || data.requiredSkills || [],
+            createdBy: data.owner?.id ? String(data.owner.id) : 'Unknown'
+          };
+          const response = await axios.post('http://localhost:5001/api/teams/request', payload);
+          const dbReq = response.data.teamRequest;
+          
+          const newReq = {
+            _id:           dbReq._id,
+            hackathonId:   String(data.hackathonId),
+            teamName:      data.teamName || '',
+            description:   data.description,
+            requiredRoles: data.requiredRoles || [],
+            requiredSkills: data.requiredSkills || [],
+            owner:         data.owner,
+            members:       [data.owner].filter(Boolean),
+            joinRequests:  [],
+            status:        'open',
+            createdAt:     dbReq.createdAt
+          }
+          set(state => ({ teamRequests: [newReq, ...state.teamRequests] }))
+          return newReq
+        } catch (error) {
+          console.error("Failed to post team request", error);
+          throw error;
         }
-        set(state => ({ teamRequests: [newReq, ...state.teamRequests] }))
-        return newReq
       },
 
       /** User B: Send a join request to a team */
-      sendJoinRequest: (teamRequestId, sender, message) => {
-        const teamReq = get().teamRequests.find(r => r._id === teamRequestId)
+      sendJoinRequest: async (teamRequestId, sender, message) => {
+        const teamReq = get().teamRequests.find(r => r._id === teamRequestId || r.id === teamRequestId)
         if (!teamReq) return null
 
         // Prevent duplicate
@@ -107,50 +124,67 @@ export const useHackathonStore = create(
         )
         if (already) return already
 
-        const jr = {
-          _id:           Date.now().toString(),
-          teamRequestId,
-          hackathonId:   teamReq.hackathonId,
-          sender,        // {id, name, email, skills, department, year}
-          message,
-          status:        'pending',
-          createdAt:     new Date().toISOString()
-        }
+        try {
+          const payload = {
+            teamRequestId: teamReq._id || teamReq.id,
+            hackathonId: teamReq.hackathonId || 'unknown',
+            applicantId: sender?.id ? String(sender.id) : 'unknown',
+            applicantName: sender?.name || 'Current User',
+            applicantSkills: sender?.skills || [],
+            message: message || 'I would like to join your team.'
+          };
+          
+          const response = await axios.post('http://localhost:5001/api/teams/join', payload);
+          const dbReq = response.data.joinRequest;
 
-        set(state => {
-          // add join request
-          const updatedJRs = [...state.joinRequests, jr]
-
-          // attach to team request's joinRequests array
-          const updatedTRs = state.teamRequests.map(tr =>
-            tr._id === teamRequestId
-              ? { ...tr, joinRequests: [...(tr.joinRequests || []), jr._id] }
-              : tr
-          )
-
-          // notify the team owner
-          const ownerId = String(teamReq.owner?.id)
-          const prevOwnerNotifs = state.userNotifications[ownerId] || []
-          const newNotif = {
-            id:        Date.now().toString() + 'n',
-            text:      `${sender.name} wants to join your team "${teamReq.teamName || teamReq.description.slice(0, 30)}"`,
-            type:      'join_request',
-            read:      false,
-            createdAt: new Date().toISOString(),
-            meta:      { joinRequestId: jr._id, teamRequestId, hackathonId: teamReq.hackathonId }
+          const jr = {
+            _id:           dbReq._id,
+            teamRequestId: teamReq._id || teamReq.id,
+            hackathonId:   teamReq.hackathonId,
+            sender,
+            message:       payload.message,
+            status:        'pending',
+            createdAt:     dbReq.createdAt
           }
 
-          return {
-            joinRequests:      updatedJRs,
-            teamRequests:      updatedTRs,
-            userNotifications: {
-              ...state.userNotifications,
-              [ownerId]: [newNotif, ...prevOwnerNotifs]
+          set(state => {
+            // add join request
+            const updatedJRs = [...state.joinRequests, jr]
+
+            // attach to team request's joinRequests array
+            const updatedTRs = state.teamRequests.map(tr =>
+              (tr._id === teamRequestId || tr.id === teamRequestId)
+                ? { ...tr, joinRequests: [...(tr.joinRequests || []), jr._id] }
+                : tr
+            )
+
+            // notify the team owner
+            const ownerId = String(teamReq.owner?.id)
+            const prevOwnerNotifs = state.userNotifications[ownerId] || []
+            const newNotif = {
+              id:        Date.now().toString() + 'n',
+              text:      `${sender.name || 'Someone'} wants to join your team "${teamReq.teamName || teamReq.title || 'Untitled'}"`,
+              type:      'join_request',
+              read:      false,
+              createdAt: new Date().toISOString(),
+              meta:      { joinRequestId: jr._id, teamRequestId, hackathonId: teamReq.hackathonId }
             }
-          }
-        })
 
-        return jr
+            return {
+              joinRequests:      updatedJRs,
+              teamRequests:      updatedTRs,
+              userNotifications: {
+                ...state.userNotifications,
+                [ownerId]: [newNotif, ...prevOwnerNotifs]
+              }
+            }
+          })
+
+          return jr
+        } catch (error) {
+          console.error("Failed to post join request", error);
+          throw error;
+        }
       },
 
       /** User A: Accept a join request */
@@ -244,7 +278,7 @@ export const useHackathonStore = create(
       // Legacy compat
       setHackathons:   (hackathons) => set({ hackathons }),
       setTeamRequests: (requests)   => set({ teamRequests: requests }),
-      applyToTeam:     () => {},   // replaced by sendJoinRequest
+      applyToTeam:     (teamRequestId, applicant) => get().sendJoinRequest(teamRequestId, applicant, 'I would like to join your team.'),
       acceptApplicant: () => {},   // replaced by acceptJoinRequest
       addTeam:         (team) => set(state => ({ teams: [...(state.teams || []), team] }))
     }),

@@ -4,6 +4,7 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +21,7 @@ app.use(express.json()); // Parses incoming JSON requests
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
