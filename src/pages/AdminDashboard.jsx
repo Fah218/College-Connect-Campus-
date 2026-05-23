@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const { addNotification, user } = useAuthStore()
   const [selectedTab, setSelectedTab] = useState('approvals')
   const [viewingEvent, setViewingEvent] = useState(null)
+  const [managingClub, setManagingClub] = useState(null)
   
   const insights = generateInsights(events)
   const auditLogs = getAuditLogs()
@@ -138,7 +139,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'clubs' && (
-              <ClubSection />
+              <ClubSection events={events} onManage={setManagingClub} />
             )}
           </div>
         </div>
@@ -151,6 +152,14 @@ export default function AdminDashboard() {
           onClose={() => setViewingEvent(null)}
           onApprove={(id) => { handleApprove(id); setViewingEvent(null) }}
           onReject={(id, comment) => { handleReject(id, comment); setViewingEvent(null) }}
+        />
+      )}
+
+      {/* Club Management Modal */}
+      {managingClub && (
+        <ClubManagementModal 
+          club={managingClub} 
+          onClose={() => setManagingClub(null)} 
         />
       )}
     </div>
@@ -458,8 +467,35 @@ function AnalyticsSection({ chartData, monthlyData, events }) {
 }
 
 function AuditSection({ logs }) {
-  const exportData = logs.map(log => ({
+  const [searchTerm, setSearchTerm] = useState('')
+  const [actionFilter, setActionFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('all')
+
+  const filteredLogs = logs.filter(log => {
+    const term = searchTerm.toLowerCase();
+    const textMatches = (log.eventTitle || '').toLowerCase().includes(term) || 
+                        (log.user || '').toLowerCase().includes(term) ||
+                        (log.remarks || '').toLowerCase().includes(term);
+    if (searchTerm && !textMatches) return false;
+
+    if (actionFilter !== 'all' && log.action !== actionFilter) return false;
+
+    if (dateFilter !== 'all') {
+      const logDate = new Date(log.timestamp);
+      const now = new Date();
+      const diffTime = Math.abs(now - logDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      if (dateFilter === 'today' && diffDays > 1) return false;
+      if (dateFilter === 'week' && diffDays > 7) return false;
+      if (dateFilter === 'month' && diffDays > 30) return false;
+    }
+    
+    return true;
+  });
+
+  const exportData = filteredLogs.map(log => ({
     Action: log.action,
+    Type: 'Event Status',
     Event: log.eventTitle,
     User: log.user,
     Timestamp: format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss'),
@@ -468,59 +504,125 @@ function AuditSection({ logs }) {
   
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Audit Trail</h3>
-        <ExportButton data={exportData} filename="audit_logs" type="csv" />
+      <div className="flex flex-col mb-4">
+        <h3 className="text-xl font-bold mb-4 text-gray-900">Audit Logs</h3>
+        <hr className="border-gray-200 mb-4" />
+        
+        <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+          <div className="flex flex-wrap gap-3 flex-1">
+            <input 
+              type="text" 
+              placeholder="Search Logs..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm w-full max-w-[200px] focus:ring-2 focus:ring-primary-500 outline-none"
+            />
+            <select 
+              value={actionFilter} 
+              onChange={e => setActionFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+            >
+              <option value="all">Filter Action ▼</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="created">Created</option>
+              <option value="deleted">Deleted</option>
+            </select>
+            <select 
+              value={dateFilter} 
+              onChange={e => setDateFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none"
+            >
+              <option value="all">Filter Date ▼</option>
+              <option value="today">Today</option>
+              <option value="week">Past Week</option>
+              <option value="month">Past Month</option>
+            </select>
+          </div>
+          <ExportButton data={exportData} filename="audit_logs" type="csv" />
+        </div>
+        
+        <hr className="border-gray-200 mb-4" />
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto border rounded-xl shadow-sm">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Event</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Timestamp</th>
+              <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Remarks</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {logs.slice(0, 20).map(log => (
-              <tr key={log.id}>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {filteredLogs.slice(0, 50).map(log => (
+              <tr key={log.id} className="hover:bg-gray-50 transition">
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    log.action === 'approved' ? 'bg-green-100 text-green-700' :
-                    log.action === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-blue-100 text-blue-700'
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    log.action === 'created' ? 'bg-green-100 text-green-700 border border-green-200' :
+                    log.action === 'updated' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                    log.action === 'deleted' ? 'bg-red-100 text-red-700 border border-red-200' :
+                    log.action === 'approved' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                    log.action === 'rejected' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                    'bg-gray-100 text-gray-700 border border-gray-200'
                   }`}>
                     {log.action}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm">{log.eventTitle}</td>
-                <td className="px-6 py-4 text-sm">{log.user}</td>
-                <td className="px-6 py-4 text-sm">{format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{log.remarks || '-'}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-700">Event Status</td>
+                <td className="px-6 py-4 text-sm font-semibold text-gray-900">{log.eventTitle}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{log.user}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')}</td>
+                <td className="px-6 py-4 text-sm text-gray-600 italic max-w-xs truncate">{log.remarks || '-'}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        
+        {filteredLogs.length === 0 && (
+          <div className="text-center py-12 bg-white">
+            <p className="text-gray-500 font-medium">No matching audit logs found</p>
+          </div>
+        )}
       </div>
-      
-      {logs.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          No audit logs available
-        </div>
-      )}
     </div>
   )
 }
 
-function ClubSection() {
-  const clubs = [
-    { id: 1, name: 'Tech Club', head: 'John Doe', members: 45, events: 12 },
-    { id: 2, name: 'Coding Club', head: 'Jane Smith', members: 38, events: 8 },
-    { id: 3, name: 'AI Club', head: 'Bob Johnson', members: 52, events: 15 }
-  ]
+function ClubSection({ events, onManage }) {
+  const clubMap = {};
+  
+  (events || []).forEach(event => {
+    const clubName = event.club || event.clubName;
+    if (!clubName) return; // Skip if no club associated
+
+    if (!clubMap[clubName]) {
+      clubMap[clubName] = {
+        id: clubName,
+        name: clubName,
+        head: 'Kartikey', // Defaulting to Kartikey as the known test club head
+        members: Math.floor(Math.random() * 40) + 20, // Mock member count
+        events: 0,
+        status: 'Active',
+        eventList: []
+      };
+    }
+    clubMap[clubName].events += 1;
+    clubMap[clubName].eventList.push(event);
+  });
+
+  const clubs = Object.values(clubMap);
+
+  if (clubs.length === 0) {
+    return (
+      <div className="text-center py-12 bg-white rounded-xl border">
+        <p className="text-gray-500 font-medium">No clubs found. Create an event to register a club.</p>
+      </div>
+    )
+  }
   
   return (
     <div className="overflow-x-auto">
@@ -531,6 +633,7 @@ function ClubSection() {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Club Head</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Members</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Events</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
           </tr>
         </thead>
@@ -542,7 +645,16 @@ function ClubSection() {
               <td className="px-6 py-4">{club.members}</td>
               <td className="px-6 py-4">{club.events}</td>
               <td className="px-6 py-4">
-                <button className="text-primary-600 hover:text-primary-700">Manage</button>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                  club.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                  club.status === 'Inactive' ? 'bg-red-100 text-red-700' : 
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {club.status}
+                </span>
+              </td>
+              <td className="px-6 py-4">
+                <button onClick={() => onManage(club)} className="text-primary-600 hover:text-primary-700 font-medium">Manage</button>
               </td>
             </tr>
           ))}
@@ -551,3 +663,184 @@ function ClubSection() {
     </div>
   )
 }
+
+function ClubManagementModal({ club, onClose }) {
+  const [activeTab, setActiveTab] = useState('info')
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="p-6 border-b flex justify-between items-start bg-gray-50">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-2xl font-bold">{club.name}</h2>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                club.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                club.status === 'Inactive' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {club.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500">Managed by <span className="font-semibold text-gray-700">{club.head}</span></p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition"><X size={20} /></button>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex border-b px-6 bg-white shrink-0 overflow-x-auto">
+          {['info', 'members', 'events', 'analytics', 'settings'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-3.5 font-semibold text-sm capitalize whitespace-nowrap ${
+                activeTab === tab ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {tab === 'info' ? 'Club Info' : tab === 'settings' ? 'Settings' : tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Area */}
+        <div className="p-6 overflow-y-auto flex-1 bg-white">
+          
+          {/* Info Tab */}
+          {activeTab === 'info' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-xl border">
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Total Members</p>
+                  <p className="text-2xl font-extrabold text-gray-900">{club.members}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl border">
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Events Hosted</p>
+                  <p className="text-2xl font-extrabold text-gray-900">{club.events}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide mb-3">Core Team</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
+                      {club.head.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{club.head}</p>
+                      <p className="text-xs text-primary-600 font-semibold">President</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">A</div>
+                    <div>
+                      <p className="font-bold text-sm">Alice Cooper</p>
+                      <p className="text-xs text-blue-600 font-semibold">Vice President</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Members Tab */}
+          {activeTab === 'members' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg">Members Roster</h3>
+                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg">{club.members} Total</span>
+              </div>
+              <div className="border rounded-xl overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-gray-500 font-medium">Name</th>
+                      <th className="px-4 py-3 text-gray-500 font-medium">Role</th>
+                      <th className="px-4 py-3 text-gray-500 font-medium">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <tr key={i}>
+                        <td className="px-4 py-3 font-medium text-gray-900">Student {i}</td>
+                        <td className="px-4 py-3 text-gray-600">Member</td>
+                        <td className="px-4 py-3 text-gray-500">Aug 2023</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Events Tab */}
+          {activeTab === 'events' && (
+            <div>
+              <h3 className="font-bold text-lg mb-4">Events Hosted by {club.name}</h3>
+              {(!club.eventList || club.eventList.length === 0) ? (
+                <p className="text-gray-500 text-sm">No events found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {club.eventList.map((e, idx) => (
+                    <div key={idx} className={`p-4 border rounded-xl flex justify-between items-center transition bg-white ${
+                      e.status === 'pending' ? 'border-yellow-200 bg-yellow-50' : 'hover:border-primary-200'
+                    }`}>
+                      <div>
+                        <h4 className="font-bold text-gray-800">{e.title}</h4>
+                        <p className="text-xs text-gray-500 mt-1">{e.date ? new Date(e.date).toLocaleDateString() : 'Date TBA'}</p>
+                      </div>
+                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${
+                        e.status === 'approved' ? 'bg-green-50 text-green-700' :
+                        e.status === 'rejected' ? 'bg-red-50 text-red-700' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {e.status || 'Unknown'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+              <Eye size={48} className="mb-4 opacity-20" />
+              <p className="text-lg font-bold text-gray-600">Analytics Dashboard</p>
+              <p className="text-sm mt-1">Detailed club analytics will be available here.</p>
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="space-y-8">
+              <div>
+                <h3 className="font-bold text-lg mb-2">Club Status</h3>
+                <p className="text-sm text-gray-500 mb-4">Toggle the active status of this club on the platform.</p>
+                <div className="flex gap-3">
+                  <button className={`px-4 py-2 font-bold text-sm rounded-lg border transition ${club.status === 'Active' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white hover:bg-gray-50'}`}>
+                    Active
+                  </button>
+                  <button className={`px-4 py-2 font-bold text-sm rounded-lg border transition ${club.status === 'Inactive' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white hover:bg-gray-50'}`}>
+                    Inactive
+                  </button>
+                </div>
+              </div>
+              <div className="pt-6 border-t border-red-100">
+                <h3 className="font-bold text-red-600 mb-2">Danger Zone</h3>
+                <p className="text-sm text-gray-500 mb-4">Permanently delete this club and all associated data.</p>
+                <button className="px-4 py-2 bg-red-600 text-white font-bold text-sm rounded-lg hover:bg-red-700 transition">
+                  Delete Club
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+}
+

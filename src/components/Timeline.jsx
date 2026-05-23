@@ -11,23 +11,31 @@ export default function Timeline({ events, userRole }) {
       return e.status === 'approved'
     })
     .map(event => {
-      const eventDate = parseISO(event.date)
+      const dateStr = event.date || event.startDate;
+      let eventDate = new Date(); // Fallback to current date
+      if (dateStr) {
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime())) {
+          eventDate = parsed;
+        }
+      }
+      
       const isUpcoming = isAfter(eventDate, now)
       const isPast = isBefore(eventDate, now)
       const isToday = format(eventDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')
       
       let status = 'upcoming'
       let icon = Calendar
-      let color = 'blue'
+      let color = 'green'
       
       if (isPast) {
         status = 'completed'
         icon = CheckCircle
-        color = 'green'
+        color = 'gray'
       } else if (isToday) {
         status = 'ongoing'
         icon = Clock
-        color = 'orange'
+        color = 'blue'
       } else if (event.status === 'pending') {
         status = 'pending'
         icon = AlertCircle
@@ -40,7 +48,7 @@ export default function Timeline({ events, userRole }) {
         status,
         icon,
         color,
-        sortDate: eventDate
+        sortDate: eventDate.getTime()
       }
     })
     .sort((a, b) => a.sortDate - b.sortDate)
@@ -85,8 +93,8 @@ export default function Timeline({ events, userRole }) {
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  <p>{format(item.eventDate, 'EEEE, MMMM dd, yyyy')} at {item.time}</p>
-                  <p className="text-gray-500">{item.location}</p>
+                  <p>{format(item.eventDate, 'EEEE, MMMM dd, yyyy')}{item.time ? ` at ${item.time}` : ' (Time TBA)'}</p>
+                  <p className="text-gray-500">{item.location || 'Location TBA'}</p>
                   
                   {userRole === 'admin' && item.status === 'pending' && (
                     <p className="text-orange-600 mt-2">⚠️ Awaiting approval</p>
