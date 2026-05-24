@@ -21,7 +21,13 @@ export default function ClubHeadDashboard() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [viewingEvent, setViewingEvent] = useState(null)
   
-  const myEvents = events.filter(e => e.club === 'Tech Club')
+  const { user } = useAuthStore()
+  const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
+  
+  const myEvents = events.filter(e => {
+    const eventClub = (e.club || e.clubName || '').trim().toLowerCase()
+    return eventClub === currentClubName
+  })
   const pendingEvents = myEvents.filter(e => e.status === 'pending')
   const approvedEvents = myEvents.filter(e => e.status === 'approved')
   
@@ -35,7 +41,7 @@ export default function ClubHeadDashboard() {
       })
     } else {
       try {
-        await addEvent({ ...formData, club: 'Tech Club' })
+        await addEvent({ ...formData, club: user?.clubName || user?.name || 'My Club' })
         addNotification({
           title: 'Event Created',
           message: `${formData.title} has been submitted for approval`,
@@ -67,7 +73,7 @@ export default function ClubHeadDashboard() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Club Head Dashboard</h1>
+          <h1 className="text-3xl font-bold">Dashboard: <span className="text-primary-600 capitalize">{currentClubName}</span></h1>
           <div className="flex gap-2">
             <ExportButton data={exportData} filename="club_events" type="csv" />
             <button
@@ -153,7 +159,7 @@ export default function ClubHeadDashboard() {
                       <div className="font-medium">{event.title}</div>
                       <div className="text-sm text-gray-500">{event.category}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm">{format(new Date(event.date), 'MMM dd, yyyy')}</td>
+                    <td className="px-6 py-4 text-sm">{(event.date || event.startDate) && !isNaN(new Date(event.date || event.startDate).getTime()) ? format(new Date(event.date || event.startDate), 'MMM dd, yyyy') : 'Date TBA'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         event.status === 'approved' ? 'bg-green-100 text-green-700' :

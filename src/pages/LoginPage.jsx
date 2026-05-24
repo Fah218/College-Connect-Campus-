@@ -38,7 +38,9 @@ export default function LoginPage() {
         name: response.data.user.name,
         email: response.data.user.email,
         role: role,
-        skills: response.data.user.skills || ['React', 'Python', 'Machine Learning']
+        skills: response.data.user.skills || ['React', 'Python', 'Machine Learning'],
+        clubName: response.data.user.clubName,
+        department: response.data.user.department
       }
       
       login(userData)

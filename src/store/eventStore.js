@@ -59,10 +59,35 @@ export const useEventStore = create(
       registeredEvents: [],
       auditLogs: [],
       
+      fetchEvents: async () => {
+        try {
+          const response = await axios.get('http://localhost:5001/api/events');
+          const dbEvents = response.data.events.map(dbEvent => ({
+            ...dbEvent,
+            id: dbEvent._id,
+            attendees: dbEvent.attendees || 0,
+            club: dbEvent.clubName, // map clubName back to club for backward compatibility with frontend
+            capacity: dbEvent.maxParticipants || 100, // Map maxParticipants to capacity for the UI
+            date: dbEvent.date || dbEvent.startDate,
+            time: dbEvent.time || dbEvent.startTime
+          }));
+          
+          set((state) => {
+            // Keep hardcoded events (id is number) and merge DB events (id is string/ObjectId)
+            const hardcodedEvents = state.events.filter(e => typeof e.id === 'number');
+            return { events: [...hardcodedEvents, ...dbEvents] };
+          });
+        } catch (error) {
+          console.error("Error fetching events from DB:", error);
+        }
+      },
+      
       addEvent: async (event) => {
         const payload = {
           ...event,
           clubName: event.club || 'Tech Club',
+          date: event.date || event.startDate || new Date().toISOString().split('T')[0],
+          time: event.time || event.startTime || '12:00',
           shortDescription: event.shortDescription || 'No description provided',
           description: event.description || 'No description provided',
           registrationDeadlineDate: event.registrationDeadlineDate || new Date().toISOString().split('T')[0],

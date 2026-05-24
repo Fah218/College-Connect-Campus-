@@ -28,6 +28,9 @@ const joinRequestSchema = new mongoose.Schema({
   portfolioLink: {
     type: String
   },
+  linkedinLink: {
+    type: String
+  },
   message: {
     type: String
   },

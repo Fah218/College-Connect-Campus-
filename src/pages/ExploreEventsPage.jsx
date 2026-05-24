@@ -15,8 +15,8 @@ export default function ExploreEventsPage() {
   const [clubFilter, setClubFilter]   = useState('All')
   const [dateFilter, setDateFilter]   = useState('')
 
-  // Only show approved events on the public explore page
-  const approved = useMemo(() => events.filter(e => e.status === 'approved'), [events])
+  // Show all events (including pending) so creators can see them immediately
+  const approved = useMemo(() => events, [events])
 
   // Derive unique club list from approved events
   const clubs = useMemo(() => {

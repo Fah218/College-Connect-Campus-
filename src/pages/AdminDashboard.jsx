@@ -599,11 +599,17 @@ function ClubSection({ events, onManage }) {
     const clubName = event.club || event.clubName;
     if (!clubName) return; // Skip if no club associated
 
+    const headMapping = {
+      'tech club': 'Kartikey',
+      'e-cell': 'Lokendra',
+      'kalakarit': 'Kartikey Patel'
+    };
+
     if (!clubMap[clubName]) {
       clubMap[clubName] = {
         id: clubName,
         name: clubName,
-        head: 'Kartikey', // Defaulting to Kartikey as the known test club head
+        head: headMapping[clubName.toLowerCase()] || 'Pending Assignment',
         members: Math.floor(Math.random() * 40) + 20, // Mock member count
         events: 0,
         status: 'Active',

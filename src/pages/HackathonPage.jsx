@@ -23,7 +23,7 @@ export default function HackathonPage() {
   // Merge real events that have category === 'Hackathon' with the mock hackathon store
   const eventHackathons = useMemo(() =>
     (events || [])
-      .filter(e => e.status === 'approved' && e.category === 'Hackathon')
+      .filter(e => e.category === 'Hackathon')
       .map(e => ({
         id:          `ev-${e.id}`, // Prefix to avoid key collisions
         realId:      e.id,

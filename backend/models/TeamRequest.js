@@ -30,17 +30,7 @@ const teamRequestSchema = new mongoose.Schema({
     default: 4
   },
   currentMembers: [{
-    userId: {
-      type: String,
-      ref: "User"
-    },
-    role: {
-      type: String
-    },
-    joinedAt: {
-      type: Date,
-      default: Date.now
-    }
+    type: mongoose.Schema.Types.Mixed
   }],
   status: {
     type: String,

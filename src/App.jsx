@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { useEventStore } from './store/eventStore'
+import { useHackathonStore } from './store/hackathonStore'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
@@ -17,6 +20,14 @@ import ClubHeadProfilePage from './pages/ClubHeadProfilePage'
 import ExploreEventsPage from './pages/ExploreEventsPage'
 
 function App() {
+  const fetchEvents = useEventStore(state => state.fetchEvents)
+  const fetchHackathonData = useHackathonStore(state => state.fetchHackathonData)
+  
+  useEffect(() => {
+    fetchEvents()
+    fetchHackathonData()
+  }, [fetchEvents, fetchHackathonData])
+
   return (
     <BrowserRouter>
       <Routes>

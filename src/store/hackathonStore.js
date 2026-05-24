@@ -44,9 +44,59 @@ export const useHackathonStore = create(
       //          message, status:'pending'|'accepted'|'rejected', createdAt }
       joinRequests: [],
 
-      // ── Notifications per user (keyed by userId) ───────────────────────────
       // { [userId]: [{ id, text, type, read, createdAt, meta }] }
       userNotifications: {},
+
+      fetchHackathonData: async () => {
+        try {
+          const [teamRes, joinRes] = await Promise.all([
+            axios.get('http://localhost:5001/api/teams/request'),
+            axios.get('http://localhost:5001/api/teams/join')
+          ]);
+          
+          const dbJoinRequests = joinRes.data.joinRequests.map(jr => ({
+            ...jr,
+            _id: jr._id,
+            id: jr._id,
+            teamRequestId: jr.teamRequestId,
+            hackathonId: jr.hackathonId,
+            message: jr.message,
+            status: jr.status,
+            githubLink: jr.githubLink,
+            portfolioLink: jr.portfolioLink,
+            linkedinLink: jr.linkedinLink,
+            sender: { id: jr.applicantId, name: jr.applicantName, skills: jr.applicantSkills } // map back to sender for UI compatibility
+          }));
+
+          const dbTeamRequests = teamRes.data.teamRequests.map(tr => {
+            // Recover members data by combining the owner and all accepted join requests!
+            const ownerMember = { id: tr.createdBy || 'unknown', name: 'Team Lead' };
+            const acceptedMembers = dbJoinRequests
+              .filter(jr => String(jr.teamRequestId) === String(tr._id) && jr.status === 'accepted')
+              .map(jr => jr.sender);
+
+            return {
+              ...tr,
+              _id: tr._id,
+              id: tr._id,
+              hackathonId: tr.hackathonId,
+              teamName: tr.title || tr.teamName || 'Untitled Team',
+              description: tr.description || '',
+              requiredRoles: tr.rolesNeeded || tr.roles || [],
+              requiredSkills: tr.requiredSkills || tr.skills || [],
+              owner: { id: tr.createdBy || 'unknown' }, // map back to owner for UI compatibility
+              members: [ownerMember, ...acceptedMembers]
+            };
+          });
+          
+          set({
+            teamRequests: dbTeamRequests,
+            joinRequests: dbJoinRequests
+          });
+        } catch (error) {
+          console.error("Error fetching hackathon data:", error);
+        }
+      },
 
       // ── Helpers ────────────────────────────────────────────────────────────
       getTeamRequestsForHackathon: (hackathonId) => {
@@ -114,7 +164,7 @@ export const useHackathonStore = create(
       },
 
       /** User B: Send a join request to a team */
-      sendJoinRequest: async (teamRequestId, sender, message) => {
+      sendJoinRequest: async (teamRequestId, sender, message, details = {}) => {
         const teamReq = get().teamRequests.find(r => r._id === teamRequestId || r.id === teamRequestId)
         if (!teamReq) return null
 
@@ -130,7 +180,10 @@ export const useHackathonStore = create(
             hackathonId: teamReq.hackathonId || 'unknown',
             applicantId: sender?.id ? String(sender.id) : 'unknown',
             applicantName: sender?.name || 'Current User',
-            applicantSkills: sender?.skills || [],
+            applicantSkills: details.skills ? details.skills.split(',').map(s => s.trim()).filter(Boolean) : (sender?.skills || []),
+            githubLink: details.github || '',
+            portfolioLink: details.portfolio || '',
+            linkedinLink: details.linkedin || '',
             message: message || 'I would like to join your team.'
           };
           
@@ -141,7 +194,10 @@ export const useHackathonStore = create(
             _id:           dbReq._id,
             teamRequestId: teamReq._id || teamReq.id,
             hackathonId:   teamReq.hackathonId,
-            sender,
+            sender:        { ...sender, skills: payload.applicantSkills },
+            githubLink:    payload.githubLink,
+            portfolioLink: payload.portfolioLink,
+            linkedinLink:  payload.linkedinLink,
             message:       payload.message,
             status:        'pending',
             createdAt:     dbReq.createdAt
@@ -188,26 +244,29 @@ export const useHackathonStore = create(
       },
 
       /** User A: Accept a join request */
-      acceptJoinRequest: (joinRequestId) => {
-        set(state => {
-          const jr = state.joinRequests.find(j => j._id === joinRequestId)
-          if (!jr) return {}
+      acceptJoinRequest: async (joinRequestId) => {
+        try {
+          await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
+          
+          set(state => {
+            const jr = state.joinRequests.find(j => j._id === joinRequestId)
+            if (!jr) return {}
 
-          const updatedJRs = state.joinRequests.map(j =>
-            j._id === joinRequestId ? { ...j, status: 'accepted' } : j
-          )
+            const updatedJRs = state.joinRequests.map(j =>
+              j._id === joinRequestId ? { ...j, status: 'accepted' } : j
+            )
 
-          // add sender to team members
-          const updatedTRs = state.teamRequests.map(tr =>
-            tr._id === jr.teamRequestId
-              ? {
-                  ...tr,
-                  members: tr.members.some(m => String(m.id) === String(jr.sender.id))
-                    ? tr.members
-                    : [...tr.members, jr.sender]
-                }
-              : tr
-          )
+            // add sender to team members
+            const updatedTRs = state.teamRequests.map(tr =>
+              tr._id === jr.teamRequestId
+                ? {
+                    ...tr,
+                    members: tr.members.some(m => String(m.id) === String(jr.sender.id))
+                      ? tr.members
+                      : [...tr.members, jr.sender]
+                  }
+                : tr
+            )
 
           // notify the sender (User B)
           const senderId = String(jr.sender?.id)
@@ -231,17 +290,23 @@ export const useHackathonStore = create(
             }
           }
         })
+        } catch (error) {
+          console.error("Failed to accept join request", error);
+        }
       },
 
       /** User A: Reject a join request */
-      rejectJoinRequest: (joinRequestId) => {
-        set(state => {
-          const jr = state.joinRequests.find(j => j._id === joinRequestId)
-          if (!jr) return {}
+      rejectJoinRequest: async (joinRequestId) => {
+        try {
+          await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
 
-          const updatedJRs = state.joinRequests.map(j =>
-            j._id === joinRequestId ? { ...j, status: 'rejected' } : j
-          )
+          set(state => {
+            const jr = state.joinRequests.find(j => j._id === joinRequestId)
+            if (!jr) return {}
+
+            const updatedJRs = state.joinRequests.map(j =>
+              j._id === joinRequestId ? { ...j, status: 'rejected' } : j
+            )
 
           // notify sender
           const senderId = String(jr.sender?.id)
@@ -264,6 +329,9 @@ export const useHackathonStore = create(
             }
           }
         })
+        } catch (error) {
+          console.error("Failed to reject join request", error);
+        }
       },
 
       markUserNotifRead: (userId, notifId) =>

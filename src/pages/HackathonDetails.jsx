@@ -90,15 +90,33 @@ export default function HackathonDetails() {
     addNotification({ title: 'Success!', message: `Registered for ${h.title}`, priority: 'high' })
   }
 
-  const handleSendJoin = (reqId) => {
+  const handleSendJoin = (reqId, details) => {
     if (!isAuthenticated) { navigate('/login'); return }
     const msg = joinMsg[reqId] || ''
     store.sendJoinRequest?.(reqId, {
       id: user.id, name: user.name, email: user.email,
       skills: user.skills || [], department: user.department, year: user.year
-    }, msg)
+    }, msg, details)
     addNotification({ title: 'Request Sent', message: 'Join request sent!', priority: 'medium' })
     setJoinMsg(p => ({ ...p, [reqId]: '' }))
+    setJoinForm(p => ({ ...p, [reqId]: false }))
+  }
+
+  const [joinForm, setJoinForm] = useState({})
+  const [joinDetails, setJoinDetails] = useState({})
+
+  const toggleJoinForm = (reqId) => {
+    setJoinForm(p => ({ ...p, [reqId]: !p[reqId] }))
+    if (!joinDetails[reqId]) {
+      setJoinDetails(p => ({ ...p, [reqId]: { github: '', portfolio: '', linkedin: '', skills: '' } }))
+    }
+  }
+
+  const updateJoinDetails = (reqId, field, value) => {
+    setJoinDetails(p => ({
+      ...p,
+      [reqId]: { ...p[reqId], [field]: value }
+    }))
   }
 
   return (
@@ -174,14 +192,48 @@ export default function HackathonDetails() {
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
               <h3 className="font-bold text-yellow-800 mb-3 flex items-center gap-2"><Bell size={18} /> New Requests</h3>
               {pendingInbox.map(jr => (
-                <div key={jr._id} className="bg-white border rounded-lg p-3 mb-2 flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-sm">{jr.sender?.name}</p>
-                    <p className="text-xs text-gray-500">{jr.message}</p>
+                <div key={jr._id} className="bg-white border rounded-lg p-4 mb-3 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-bold text-gray-900">{jr.sender?.name}</p>
+                      <p className="text-xs text-gray-600 italic">"{jr.message || 'No message'}"</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => store.acceptJoinRequest?.(jr._id)} className="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-green-700">Accept</button>
+                      <button onClick={() => store.rejectJoinRequest?.(jr._id)} className="px-4 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg border border-red-200 hover:bg-red-100">Reject</button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => store.acceptJoinRequest?.(jr._id)} className="px-3 py-1 bg-green-600 text-white text-xs rounded-md">Accept</button>
-                    <button onClick={() => store.rejectJoinRequest?.(jr._id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded-md">Reject</button>
+                  
+                  {/* Links and Skills */}
+                  <div className="bg-gray-50 rounded-lg p-3 text-xs border border-gray-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                      {jr.githubLink && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-gray-500">GitHub:</span>
+                          <a href={jr.githubLink} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline truncate">{jr.githubLink}</a>
+                        </div>
+                      )}
+                      {jr.portfolioLink && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-gray-500">Portfolio:</span>
+                          <a href={jr.portfolioLink} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline truncate">{jr.portfolioLink}</a>
+                        </div>
+                      )}
+                      {jr.linkedinLink && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-gray-500">LinkedIn:</span>
+                          <a href={jr.linkedinLink} target="_blank" rel="noreferrer" className="text-primary-600 hover:underline truncate">{jr.linkedinLink}</a>
+                        </div>
+                      )}
+                    </div>
+                    {jr.sender?.skills?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-200">
+                        <span className="font-semibold text-gray-500 mr-1 mt-0.5">Skills:</span>
+                        {jr.sender.skills.map((s, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[10px] font-bold border border-blue-100">{s}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -276,9 +328,41 @@ export default function HackathonDetails() {
                       {isOwner ? <span className="text-xs font-bold text-primary-600">Your Post</span> :
                        isMember ? <span className="text-xs font-bold text-green-600">✓ You are in this team</span> :
                        myJR ? <span className="text-xs font-bold text-yellow-600">⏳ Request {myJR.status}</span> :
-                       <div className="flex gap-2">
-                         <input value={joinMsg[req._id] || ''} onChange={e => setJoinMsg(p => ({...p, [req._id]: e.target.value}))} placeholder="Message..." className="flex-1 px-3 py-1.5 border rounded-lg text-xs" />
-                         <button onClick={() => handleSendJoin(req._id)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg">Join</button>
+                       <div className="flex flex-col gap-2">
+                         {!joinForm[req._id] ? (
+                           <button onClick={() => toggleJoinForm(req._id)} className="self-start px-4 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-primary-700">Request to Join</button>
+                         ) : (
+                           <div className="bg-white border border-primary-200 rounded-xl p-4 shadow-sm mt-2">
+                             <h4 className="text-xs font-bold text-primary-800 mb-3">Complete Join Request</h4>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                               <div>
+                                 <label className="text-[10px] font-bold text-gray-500 uppercase">GitHub URL <span className="text-red-500">*</span></label>
+                                 <input value={joinDetails[req._id]?.github || ''} onChange={e => updateJoinDetails(req._id, 'github', e.target.value)} placeholder="https://github.com/..." className="w-full px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-primary-300" />
+                               </div>
+                               <div>
+                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Portfolio URL</label>
+                                 <input value={joinDetails[req._id]?.portfolio || ''} onChange={e => updateJoinDetails(req._id, 'portfolio', e.target.value)} placeholder="https://..." className="w-full px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-primary-300" />
+                               </div>
+                               <div>
+                                 <label className="text-[10px] font-bold text-gray-500 uppercase">LinkedIn URL</label>
+                                 <input value={joinDetails[req._id]?.linkedin || ''} onChange={e => updateJoinDetails(req._id, 'linkedin', e.target.value)} placeholder="https://linkedin.com/in/..." className="w-full px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-primary-300" />
+                               </div>
+                               <div>
+                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Your Skills</label>
+                                 <input value={joinDetails[req._id]?.skills || ''} onChange={e => updateJoinDetails(req._id, 'skills', e.target.value)} placeholder="React, Node.js, UI/UX" className="w-full px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-primary-300" />
+                                 <p className="text-[9px] text-gray-400 mt-0.5">Comma separated list</p>
+                               </div>
+                             </div>
+                             
+                             <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Message to Lead</label>
+                             <textarea value={joinMsg[req._id] || ''} onChange={e => setJoinMsg(p => ({...p, [req._id]: e.target.value}))} placeholder="Why are you a good fit?" rows={2} className="w-full px-3 py-1.5 border rounded-lg text-xs mb-3 focus:ring-2 focus:ring-primary-300" />
+                             
+                             <div className="flex gap-2 justify-end">
+                               <button onClick={() => toggleJoinForm(req._id)} className="px-4 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200">Cancel</button>
+                               <button onClick={() => handleSendJoin(req._id, joinDetails[req._id])} disabled={!joinDetails[req._id]?.github} className="px-4 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-primary-700 disabled:opacity-50">Submit Request</button>
+                             </div>
+                           </div>
+                         )}
                        </div>}
                     </div>
                   </div>

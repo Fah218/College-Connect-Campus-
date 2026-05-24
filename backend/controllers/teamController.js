@@ -56,7 +56,7 @@ export const getTeamRequests = async (req, res) => {
 
 export const createJoinRequest = async (req, res) => {
   try {
-    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, message, status } = req.body;
+    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
     
     const newJoinRequest = new JoinRequest({
       teamRequestId,
@@ -66,6 +66,7 @@ export const createJoinRequest = async (req, res) => {
       applicantSkills,
       githubLink,
       portfolioLink,
+      linkedinLink,
       message,
       status: status || 'pending'
     });
@@ -82,6 +83,76 @@ export const createJoinRequest = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create join request',
+      error: error.message
+    });
+  }
+};
+
+export const getJoinRequests = async (req, res) => {
+  try {
+    const { hackathonId, teamRequestId } = req.query;
+    const query = {};
+    if (hackathonId) query.hackathonId = hackathonId;
+    if (teamRequestId) query.teamRequestId = teamRequestId;
+    
+    const joinRequests = await JoinRequest.find(query);
+    
+    res.status(200).json({
+      success: true,
+      joinRequests
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch join requests',
+      error: error.message
+    });
+  }
+};
+
+export const updateJoinRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'accepted' or 'rejected'
+
+    const joinRequest = await JoinRequest.findById(id);
+    if (!joinRequest) {
+      return res.status(404).json({ success: false, message: 'Join request not found' });
+    }
+
+    joinRequest.status = status;
+    await joinRequest.save();
+
+    // If accepted, add applicant to team's currentMembers
+    if (status === 'accepted') {
+      const teamRequest = await TeamRequest.findById(joinRequest.teamRequestId);
+      if (teamRequest) {
+        // add applicant if not already in members
+        const isMember = teamRequest.currentMembers.some(
+          member => String(member.id) === String(joinRequest.applicantId)
+        );
+        
+        if (!isMember) {
+          teamRequest.currentMembers.push({
+            id: joinRequest.applicantId,
+            name: joinRequest.applicantName,
+            skills: joinRequest.applicantSkills || []
+          });
+          await teamRequest.save();
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Join request ${status} successfully`,
+      joinRequest
+    });
+  } catch (error) {
+    console.error('Error updating join request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update join request status',
       error: error.message
     });
   }
