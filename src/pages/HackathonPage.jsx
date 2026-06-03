@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useEventStore } from '../store/eventStore'
@@ -16,14 +16,19 @@ function safeFormat(dateStr, fmt = 'MMM dd, yyyy') {
 
 export default function HackathonPage() {
   const { hackathons } = useHackathonStore()
-  const { events } = useEventStore()
+  const eventStore = useEventStore()
+  const events = eventStore.events
   const [search, setSearch] = useState('')
   const [tagFilter, setTagFilter] = useState('All')
 
-  // Merge real events that have category === 'Hackathon' with the mock hackathon store
+  useEffect(() => {
+    eventStore.fetchEvents?.()
+  }, [])
+
+  // Merge real events that have category === 'Hackathon' and are approved
   const eventHackathons = useMemo(() =>
     (events || [])
-      .filter(e => e.category === 'Hackathon')
+      .filter(e => e.category === 'Hackathon' && e.status === 'approved')
       .map(e => ({
         id:          `ev-${e.id}`, // Prefix to avoid key collisions
         realId:      e.id,

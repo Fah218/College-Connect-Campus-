@@ -171,35 +171,57 @@ export const useEventStore = create(
         }))
       },
       
-      approveEvent: (id, approver) => set((state) => ({
-        events: state.events.map(e => e.id === id ? { ...e, status: 'approved' } : e),
-        auditLogs: [...state.auditLogs, {
-          id: Date.now(),
-          action: 'approved',
-          eventId: id,
-          eventTitle: state.events.find(e => e.id === id)?.title,
-          timestamp: new Date().toISOString(),
-          user: approver || 'Admin',
-          remarks: 'Event approved'
-        }]
-      })),
+      approveEvent: async (id, approver) => {
+        try {
+          // If the event has a MongoDB ObjectId (string), save to backend
+          if (typeof id === 'string') {
+            await axios.put(`http://localhost:5001/api/events/${id}`, { status: 'approved' });
+          }
+          set((state) => ({
+            events: state.events.map(e => e.id === id ? { ...e, status: 'approved' } : e),
+            auditLogs: [...state.auditLogs, {
+              id: Date.now(),
+              action: 'approved',
+              eventId: id,
+              eventTitle: state.events.find(e => e.id === id)?.title,
+              timestamp: new Date().toISOString(),
+              user: approver || 'Admin',
+              remarks: 'Event approved'
+            }]
+          }));
+        } catch (error) {
+          console.error("Error approving event:", error);
+        }
+      },
       
-      rejectEvent: (id, comment, rejector) => set((state) => ({
-        events: state.events.map(e => e.id === id ? { 
-          ...e, 
-          status: 'rejected', 
-          rejectionComment: comment 
-        } : e),
-        auditLogs: [...state.auditLogs, {
-          id: Date.now(),
-          action: 'rejected',
-          eventId: id,
-          eventTitle: state.events.find(e => e.id === id)?.title,
-          timestamp: new Date().toISOString(),
-          user: rejector || 'Admin',
-          remarks: comment
-        }]
-      })),
+      rejectEvent: async (id, comment, rejector) => {
+        try {
+          if (typeof id === 'string') {
+            await axios.put(`http://localhost:5001/api/events/${id}`, { 
+              status: 'rejected',
+              rejectionComment: comment
+            });
+          }
+          set((state) => ({
+            events: state.events.map(e => e.id === id ? { 
+              ...e, 
+              status: 'rejected', 
+              rejectionComment: comment 
+            } : e),
+            auditLogs: [...state.auditLogs, {
+              id: Date.now(),
+              action: 'rejected',
+              eventId: id,
+              eventTitle: state.events.find(e => e.id === id)?.title,
+              timestamp: new Date().toISOString(),
+              user: rejector || 'Admin',
+              remarks: comment
+            }]
+          }));
+        } catch (error) {
+          console.error("Error rejecting event:", error);
+        }
+      },
       
       getAuditLogs: () => get().auditLogs,
       

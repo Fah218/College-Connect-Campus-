@@ -20,7 +20,8 @@ export default function SignupPage() {
     phone: '',
     clubName: '',
     clubDescription: '',
-    adminCode: ''
+    adminCode: '',
+    inviteCode: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -63,10 +64,10 @@ export default function SignupPage() {
         phone: formData.phone || undefined,
         rollNumber: formData.role === 'student' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
         employeeId: formData.role === 'admin' ? 'EMP' + Math.floor(Math.random() * 100000) : undefined,
-        clubName: formData.role === 'club_head' ? formData.clubName : undefined,
         clubDescription: formData.role === 'club_head' ? formData.clubDescription : undefined,
         contactNumber: formData.role === 'club_head' ? formData.phone : undefined,
         studentId: formData.role === 'club_head' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
+        inviteCode: formData.role === 'club_head' ? formData.inviteCode : undefined,
       };
 
       const response = await axios.post('http://localhost:5001/api/auth/register', payload);
@@ -77,7 +78,7 @@ export default function SignupPage() {
         email: response.data.user.email,
         role: formData.role,
         skills: formData.skills,
-        clubName: formData.clubName,
+        clubName: response.data.user.clubName, // Get true club name from backend
         department: formData.department
       });
 
@@ -303,16 +304,17 @@ export default function SignupPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Club Name *
+                    Club Access Code *
                   </label>
                   <input
                     type="text"
-                    value={formData.clubName}
-                    onChange={(e) => setFormData({ ...formData, clubName: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g. Coding Club"
+                    value={formData.inviteCode}
+                    onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value.toUpperCase() })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 font-mono tracking-widest"
+                    placeholder="e.g. ECELL26"
                     required={formData.role === 'club_head'}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Provided by the administration. Your club name will be automatically assigned.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

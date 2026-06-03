@@ -37,3 +37,32 @@ export const getEvents = async (req, res) => {
     });
   }
 };
+
+export const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const updatedEvent = await Event.findByIdAndUpdate(id, updates, { new: true });
+    
+    if (!updatedEvent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Event updated successfully',
+      event: updatedEvent
+    });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update event',
+      error: error.message
+    });
+  }
+};

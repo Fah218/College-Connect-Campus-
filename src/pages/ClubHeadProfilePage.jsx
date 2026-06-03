@@ -2,19 +2,39 @@ import { useState } from 'react'
 import { User, Calendar, CheckCircle, Clock, XCircle, Users, Trophy, TrendingUp, Edit } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuthStore } from '../store/authStore'
+import { useEventStore } from '../store/eventStore'
 import Navbar from '../components/Navbar'
 import ProfileEditForm from '../components/ProfileEditForm'
+import { format } from 'date-fns'
 
 export default function ClubHeadProfilePage() {
   const { user } = useAuthStore()
+  const { events } = useEventStore()
   const [isEditing, setIsEditing] = useState(false)
   
-  const participationData = [
-    { event: 'Tech Meetup', participants: 120 },
-    { event: 'Hackathon', participants: 350 },
-    { event: 'AI Workshop', participants: 180 },
-    { event: 'Code Sprint', participants: 210 }
-  ]
+  const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
+  
+  const myEvents = events.filter(e => {
+    const eventClub = (e.club || e.clubName || '').trim().toLowerCase()
+    return eventClub === currentClubName
+  })
+  
+  const approvedEvents = myEvents.filter(e => e.status === 'approved')
+  const pendingEvents = myEvents.filter(e => e.status === 'pending')
+  const rejectedEvents = myEvents.filter(e => e.status === 'rejected')
+  
+  // Use real events for participation chart if available
+  const participationData = myEvents.length > 0 
+    ? myEvents.slice(0, 5).map(e => ({
+        event: e.title.substring(0, 15) + (e.title.length > 15 ? '...' : ''),
+        participants: e.attendees || 0
+      }))
+    : [
+        { event: 'Tech Meetup', participants: 120 },
+        { event: 'Hackathon', participants: 350 },
+        { event: 'AI Workshop', participants: 180 },
+        { event: 'Code Sprint', participants: 210 }
+      ]
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,22 +91,22 @@ export default function ClubHeadProfilePage() {
               <h3 className="text-lg font-semibold mb-4">📊 Event Stats</h3>
               <div className="grid md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 border rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-gray-800 mb-1">12</p>
+                  <p className="text-3xl font-bold text-gray-800 mb-1">{myEvents.length}</p>
                   <p className="text-sm text-gray-600">Total Events Created</p>
                 </div>
                 <div className="bg-green-50 border border-green-100 rounded-lg p-4 text-center">
                   <CheckCircle className="mx-auto text-green-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-green-700 mb-1">8</p>
+                  <p className="text-2xl font-bold text-green-700 mb-1">{approvedEvents.length}</p>
                   <p className="text-sm text-green-600">Approved</p>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 text-center">
                   <Clock className="mx-auto text-orange-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-orange-700 mb-1">3</p>
+                  <p className="text-2xl font-bold text-orange-700 mb-1">{pendingEvents.length}</p>
                   <p className="text-sm text-orange-600">Pending</p>
                 </div>
                 <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center">
                   <XCircle className="mx-auto text-red-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-red-700 mb-1">1</p>
+                  <p className="text-2xl font-bold text-red-700 mb-1">{rejectedEvents.length}</p>
                   <p className="text-sm text-red-600">Rejected</p>
                 </div>
               </div>
@@ -151,30 +171,36 @@ export default function ClubHeadProfilePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">Annual Tech Hackathon</td>
-                      <td className="px-6 py-4 text-gray-600">Nov 12, 2024</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Approved</span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">48-hour coding marathon focused on AI solutions.</td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">Code Sprint</td>
-                      <td className="px-6 py-4 text-gray-600">Dec 05, 2024</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Approved</span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">Competitive programming challenge.</td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">Web Dev Bootcamp</td>
-                      <td className="px-6 py-4 text-gray-600">Jan 15, 2025</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">Pending</span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">A full-day intensive workshop on modern web tech.</td>
-                    </tr>
+                    {myEvents.length > 0 ? (
+                      myEvents.map(event => (
+                        <tr key={event.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium text-gray-900">{event.title}</td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(event.date || event.startDate) && !isNaN(new Date(event.date || event.startDate).getTime()) 
+                              ? format(new Date(event.date || event.startDate), 'MMM dd, yyyy') 
+                              : 'Date TBA'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              event.status === 'approved' ? 'bg-green-100 text-green-700' :
+                              event.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">
+                            {event.shortDescription || event.description}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                          No events found for {user?.clubName}. Go to your Dashboard to create one!
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

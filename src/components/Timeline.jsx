@@ -11,7 +11,7 @@ export default function Timeline({ events, userRole }) {
       return e.status === 'approved'
     })
     .map(event => {
-      const dateStr = event.date || event.startDate;
+      const dateStr = event.date || event.startDate || event.createdAt || new Date().toISOString();
       let eventDate = new Date(); // Fallback to current date
       if (dateStr) {
         const parsed = new Date(dateStr);

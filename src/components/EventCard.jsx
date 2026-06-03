@@ -72,7 +72,7 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Users size={16} className="text-primary-500" />
-          {event.attendees || 0}/{event.maxParticipants || event.capacity} attendees
+          {event.attendees || 0}/{event.maxParticipants || event.capacity || 'Unlimited'} attendees
         </div>
       </div>
 

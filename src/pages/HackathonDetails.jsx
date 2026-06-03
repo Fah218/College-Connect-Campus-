@@ -79,10 +79,15 @@ export default function HackathonDetails() {
   const requests = store.getTeamRequestsForHackathon?.(h.id) || []
   const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id) : null
   const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id) || []).filter(j => String(j.hackathonId) === h.id) : []
-  const ownerInbox = user ? (store.joinRequests || []).filter(jr => 
-    requests.some(r => r._id === jr.teamRequestId && String(r.owner?.id) === String(user.id))
+  
+  // Both Team Lead AND Members can see the inbox to help fulfill the limit
+  const teamInbox = user && myTeam ? (store.joinRequests || []).filter(jr => 
+    jr.teamRequestId === myTeam._id
   ) : []
-  const pendingInbox = ownerInbox.filter(j => j.status === 'pending')
+  const pendingInbox = teamInbox.filter(j => j.status === 'pending')
+
+  // Calculate max team size from string like "Up to 4" or "4"
+  const hMaxTeamSize = parseInt(String(h.teamSize).replace(/\D/g, '')) || 4;
 
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
@@ -280,6 +285,10 @@ export default function HackathonDetails() {
                 {!myTeam && <button onClick={() => setShowPostForm(true)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg font-bold">Post Request</button>}
               </div>
               {requests.map(req => {
+                const memberCount = (req.members || []).length;
+                // If team is full, do not show the team request
+                if (memberCount >= hMaxTeamSize) return null;
+
                 const isOwner = user?.id && req.owner?.id && String(req.owner.id) === String(user.id)
                 const isMember = user?.id && (req.members || []).some(m => m && String(m.id || m._id || '') === String(user.id))
                 const myJR = user?.id && myJoinReqs.find(j => j.teamRequestId === req._id)
@@ -287,7 +296,10 @@ export default function HackathonDetails() {
                 return (
                   <div key={req._id} className="border rounded-xl p-4 bg-gray-50 hover:border-primary-200 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="font-bold text-gray-900">{String(req.teamName || 'Unnamed Team')}</p>
+                      <div>
+                        <p className="font-bold text-gray-900">{String(req.teamName || 'Unnamed Team')}</p>
+                        <p className="text-xs font-semibold text-primary-600 mt-0.5">{memberCount} / {hMaxTeamSize} Members</p>
+                      </div>
                       <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
                         Request
                       </span>

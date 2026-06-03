@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
@@ -18,6 +18,22 @@ export default function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState('approvals')
   const [viewingEvent, setViewingEvent] = useState(null)
   const [managingClub, setManagingClub] = useState(null)
+  const [clubHeads, setClubHeads] = useState([])
+  
+  useEffect(() => {
+    const fetchClubHeads = async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/auth/club-heads')
+        if (res.ok) {
+          const data = await res.json()
+          setClubHeads(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch club heads', err)
+      }
+    }
+    fetchClubHeads()
+  }, [])
   
   const insights = generateInsights(events)
   const auditLogs = getAuditLogs()
@@ -139,7 +155,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'clubs' && (
-              <ClubSection events={events} onManage={setManagingClub} />
+              <ClubSection events={events} clubHeads={clubHeads} onManage={setManagingClub} />
             )}
           </div>
         </div>
@@ -218,10 +234,15 @@ function ApprovalSection({ events, onApprove, onReject, onView }) {
                   <span className="truncate">{event.location}</span>
                 </div>
               )}
-              {(event.capacity || event.maxParticipants) && (
+              {(event.capacity || event.maxParticipants) ? (
                 <div className="flex items-center gap-1.5">
                   <Users size={13} className="text-primary-500" />
                   <span>Max {event.maxParticipants || event.capacity}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Users size={13} className="text-primary-500" />
+                  <span>Unlimited</span>
                 </div>
               )}
             </div>
@@ -592,24 +613,22 @@ function AuditSection({ logs }) {
   )
 }
 
-function ClubSection({ events, onManage }) {
+function ClubSection({ events, clubHeads, onManage }) {
   const clubMap = {};
   
   (events || []).forEach(event => {
     const clubName = event.club || event.clubName;
     if (!clubName) return; // Skip if no club associated
 
-    const headMapping = {
-      'tech club': 'Kartikey',
-      'e-cell': 'Lokendra',
-      'kalakarit': 'Kartikey Patel'
-    };
+    // Find the real club head from DB
+    const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.toLowerCase() === clubName.toLowerCase());
+    const realHead = headObj ? headObj.name : 'Pending Assignment';
 
     if (!clubMap[clubName]) {
       clubMap[clubName] = {
         id: clubName,
         name: clubName,
-        head: headMapping[clubName.toLowerCase()] || 'Pending Assignment',
+        head: realHead,
         members: Math.floor(Math.random() * 40) + 20, // Mock member count
         events: 0,
         status: 'Active',

@@ -169,7 +169,7 @@ export default function ClubHeadDashboard() {
                         {event.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">{event.attendees}/{event.capacity}</td>
+                    <td className="px-6 py-4 text-sm">{event.attendees || 0}/{event.maxParticipants || event.capacity || 'Unlimited'}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button
@@ -420,6 +420,58 @@ function EventDetailsModal({ event, onClose, onEdit }) {
                 {event.tags.map((t, i) => <span key={i} className="px-2 py-0.5 bg-primary-50 text-primary-700 text-xs rounded-full">{t}</span>)}
               </div>
             )}
+            
+            {/* Dynamic Details view */}
+            {event.contactName && (
+              <div className="mt-4 pt-3 border-t space-y-2">
+                <p className="font-semibold text-gray-700 text-xs uppercase">Contact Information</p>
+                <p><span className="font-medium">Name:</span> {event.contactName}</p>
+                {event.contactEmail && <p><span className="font-medium">Email:</span> {event.contactEmail}</p>}
+                {event.contactPhone && <p><span className="font-medium">Phone:</span> {event.contactPhone}</p>}
+              </div>
+            )}
+            
+            {event.category === 'Hackathon' && (
+              <div className="mt-4 pt-3 border-t space-y-2">
+                <p className="font-semibold text-purple-700 text-xs uppercase">Hackathon Details</p>
+                {event.prizePool && <p><span className="font-medium">Prize Pool:</span> {event.prizePool}</p>}
+                {event.winnerRewards && <p><span className="font-medium">Rewards:</span> {event.winnerRewards}</p>}
+                {event.domains && <p><span className="font-medium">Domains:</span> {event.domains}</p>}
+                {event.eligibility && <p><span className="font-medium">Eligibility:</span> {event.eligibility}</p>}
+                {event.problemStatementPdf && (
+                  <p><a href={event.problemStatementPdf} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View Problem Statement</a></p>
+                )}
+                <p><span className="font-medium">Team Size:</span> {event.teamSizeMin || 1} to {event.maxTeamSize || 'Unlimited'}</p>
+                <p><span className="font-medium">Team Formation:</span> {event.teamFormationAllowed ? 'Allowed in-app' : 'Not Allowed'}</p>
+              </div>
+            )}
+            
+            {event.category === 'Competition' && (
+              <div className="mt-4 pt-3 border-t space-y-2">
+                <p className="font-semibold text-green-700 text-xs uppercase">Competition Details</p>
+                {event.competitionType && <p><span className="font-medium">Type:</span> {event.competitionType}</p>}
+                {event.rules && <p><span className="font-medium">Rules:</span> {event.rules}</p>}
+                {event.eligibility && <p><span className="font-medium">Eligibility:</span> {event.eligibility}</p>}
+              </div>
+            )}
+            
+            {event.category === 'Workshop' && (
+              <div className="mt-4 pt-3 border-t space-y-2">
+                <p className="font-semibold text-blue-700 text-xs uppercase">Workshop Details</p>
+                {event.speakerName && <p><span className="font-medium">Speaker:</span> {event.speakerName} {event.speakerDesignation ? `(${event.speakerDesignation})` : ''}</p>}
+                {event.organization && <p><span className="font-medium">Organization:</span> {event.organization}</p>}
+                <p><span className="font-medium">Certificate:</span> {event.certificateProvided ? 'Provided' : 'No'}</p>
+              </div>
+            )}
+            
+            {event.category === 'Seminar' && (
+              <div className="mt-4 pt-3 border-t space-y-2">
+                <p className="font-semibold text-orange-700 text-xs uppercase">Seminar Details</p>
+                {event.speakerName && <p><span className="font-medium">Speaker:</span> {event.speakerName}</p>}
+                {event.seminarTopic && <p><span className="font-medium">Topic:</span> {event.seminarTopic}</p>}
+                <p><span className="font-medium">Certificate:</span> {event.certificateProvided ? 'Provided' : 'No'}</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 mt-6">
@@ -437,6 +489,7 @@ function EventDetailsModal({ event, onClose, onEdit }) {
 function EventModal({ event, onClose, onSubmit }) {
   const { events } = useEventStore()
   const { predictAttendance, predictApprovalSuccess } = useAnalyticsStore()
+  const [step, setStep] = useState(event ? 2 : 1)
   const [formData, setFormData] = useState(event || {
     title: '',
     shortDescription: '',
@@ -449,14 +502,41 @@ function EventModal({ event, onClose, onSubmit }) {
     registrationDeadlineTime: '',
     mode: 'Offline',
     location: '',
-    category: 'Workshop',
+    category: '',
     tags: [],
     maxParticipants: '',
     participationType: 'Individual',
     maxTeamSize: '',
     bannerImage: '',
-    // keep compatibility with old properties
     capacity: 50,
+    capacity: 50,
+    
+    // Contact details (Common)
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    
+    // Eligibility (Common)
+    eligibility: 'All Students',
+    
+    // Hackathon details
+    prizePool: '',
+    teamSizeMin: '',
+    teamFormationAllowed: true,
+    winnerRewards: '',
+    problemStatementPdf: '',
+    domains: '',
+    
+    // Competition details
+    competitionType: '',
+    rules: '',
+    
+    // Workshop / Seminar details
+    speakerName: '',
+    speakerDesignation: '',
+    organization: '',
+    certificateProvided: false,
+    seminarTopic: ''
   })
   
   const handleImageUpload = (e, field) => {
@@ -476,7 +556,6 @@ function EventModal({ event, onClose, onSubmit }) {
   
   const handleSubmit = (e) => {
     e.preventDefault()
-    // map new fields to old ones for backward compatibility if needed
     const finalData = {
       ...formData,
       date: formData.startDate,
@@ -486,74 +565,108 @@ function EventModal({ event, onClose, onSubmit }) {
     onSubmit(finalData)
   }
   
+  const categories = ['Workshop', 'Hackathon', 'Seminar', 'Competition', 'Club Activity'];
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">{event ? 'Edit Event' : 'Create New Event'}</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">{event ? 'Edit Event' : 'Create New Event'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-8">
-          
-          {/* Section 1: Basic Info */}
+        {step === 1 ? (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-700">What type of event would you like to create?</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setFormData({ ...formData, category: cat, participationType: cat === 'Hackathon' ? 'Team' : 'Individual' })
+                    setStep(2)
+                  }}
+                  className="flex flex-col items-center justify-center p-6 border-2 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition"
+                >
+                  <span className="font-bold text-gray-800 text-lg">{cat}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end pt-4">
+              <button onClick={onClose} className="px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+              <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold uppercase">{formData.category}</span>
+              {!event && (
+                <button type="button" onClick={() => setStep(1)} className="text-sm text-blue-600 hover:underline">Change Type</button>
+              )}
+            </div>
+
+            {/* Common Fields */}
+            <section>
+              <h3 className="text-lg font-semibold border-b pb-2 mb-4">Common Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Event Title *</label>
+                  <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Short Description (1-2 lines) *</label>
+                  <input type="text" value={formData.shortDescription} onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Detailed Description *</label>
+                  <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg" rows="4" required />
+                </div>
+              </div>
+            </section>
+
+          {/* Section 2: Contact Info */}
           <section>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Section 1: Basic Info</h3>
-            <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Contact Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Event Title *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                />
+                <label className="block text-sm font-medium mb-1">Contact Person Name <span className="text-red-600">*</span></label>
+                <input type="text" value={formData.contactName} onChange={(e) => setFormData({ ...formData, contactName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Short Description (1-2 lines for preview cards) *</label>
-                <input
-                  type="text"
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                />
+                <label className="block text-sm font-medium mb-1">Contact Email <span className="text-red-600">*</span></label>
+                <input type="email" value={formData.contactEmail} onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Detailed Description (full info) *</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  rows="4"
-                  required
-                />
+                <label className="block text-sm font-medium mb-1">Contact Phone <span className="text-red-600">*</span></label>
+                <input type="tel" value={formData.contactPhone} onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
             </div>
           </section>
 
-          {/* Section 2: Date & Time */}
+          {/* Section 3: Date & Location */}
           <section>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Section 2: Date & Time</h3>
+            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Date & Location</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Start Date</label>
+                <label className="block text-sm font-medium mb-1">Start Date <span className="text-red-600">*</span></label>
                 <input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Start Time</label>
+                <label className="block text-sm font-medium mb-1">Start Time <span className="text-red-600">*</span></label>
                 <input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">End Date</label>
+                <label className="block text-sm font-medium mb-1">End Date (optional)</label>
                 <input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">End Time</label>
+                <label className="block text-sm font-medium mb-1">End Time (optional)</label>
                 <input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-red-600">Registration Deadline Date *</label>
                 <input type="date" value={formData.registrationDeadlineDate} onChange={(e) => setFormData({ ...formData, registrationDeadlineDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
@@ -563,14 +676,9 @@ function EventModal({ event, onClose, onSubmit }) {
                 <input type="time" value={formData.registrationDeadlineTime} onChange={(e) => setFormData({ ...formData, registrationDeadlineTime: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
             </div>
-          </section>
-
-          {/* Section 3: Location */}
-          <section>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Section 3: Location</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Mode</label>
+                <label className="block text-sm font-medium mb-1">Mode <span className="text-red-600">*</span></label>
                 <select value={formData.mode} onChange={(e) => setFormData({ ...formData, mode: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
                   <option>Offline</option>
                   <option>Online</option>
@@ -578,55 +686,150 @@ function EventModal({ event, onClose, onSubmit }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Venue / Platform Link</label>
-                <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder={formData.mode === 'Online' ? 'e.g., Zoom Link' : 'e.g., Main Auditorium'} className="w-full px-4 py-2 border rounded-lg" required />
+                <label className="block text-sm font-medium mb-1">Venue / Platform Link <span className="text-red-600">*</span></label>
+                <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
             </div>
           </section>
 
-          {/* Section 4: Category & Tags */}
           <section>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Section 4: Category & Tags</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
-                  <option>Workshop</option>
-                  <option>Seminar</option>
-                  <option>Hackathon</option>
-                  <option>Competition</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Tags (comma-separated)</label>
-                <input type="text" value={formData.tags?.join(', ') || formData.domains?.join(', ') || ''} onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="AI, Web Dev, Design" className="w-full px-4 py-2 border rounded-lg" />
-              </div>
-            </div>
-          </section>
-
-          {/* Section 5: Participation Settings */}
-          <section>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Section 5: Participation Settings</h3>
+            <h3 className="text-lg font-semibold border-b pb-2 mb-4">Tags & Participation</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Participation Type</label>
-                <select value={formData.participationType} onChange={(e) => setFormData({ ...formData, participationType: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
-                  <option>Individual</option>
-                  <option>Team</option>
+                <label className="block text-sm font-medium mb-1">Eligibility <span className="text-red-600">*</span></label>
+                <select value={formData.eligibility} onChange={(e) => setFormData({ ...formData, eligibility: e.target.value })} className="w-full px-4 py-2 border rounded-lg">
+                  <option>All Students</option>
+                  <option>1st Year Only</option>
+                  <option>2nd Year Only</option>
+                  <option>3rd Year Only</option>
+                  <option>4th Year Only</option>
+                  <option>CSE Only</option>
+                  <option>Open to All Departments</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Tags (comma-separated) (optional)</label>
+                <input type="text" value={formData.tags?.join(', ') || ''} onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="AI, Web Dev, Design" className="w-full px-4 py-2 border rounded-lg" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Max Participants (optional)</label>
                 <input type="number" value={formData.maxParticipants} onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) || '' })} placeholder="e.g. 100" className="w-full px-4 py-2 border rounded-lg" />
               </div>
             </div>
-            {formData.participationType === 'Team' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Max Team Size</label>
-                <input type="number" value={formData.maxTeamSize} onChange={(e) => setFormData({ ...formData, maxTeamSize: parseInt(e.target.value) || '' })} placeholder="e.g. 4" className="w-full px-4 py-2 border rounded-lg" required />
-              </div>
-            )}
           </section>
+
+            {/* Dynamic Type-Specific Sections */}
+            {formData.category === 'Hackathon' && (
+              <section>
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-purple-700">Hackathon Details</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Prizes <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.prizePool} onChange={(e) => setFormData({ ...formData, prizePool: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="$10,000 or Swags" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Winner Rewards (optional)</label>
+                    <input type="text" value={formData.winnerRewards} onChange={(e) => setFormData({ ...formData, winnerRewards: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="Internships, Credits" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Min Team Size <span className="text-red-600">*</span></label>
+                    <input type="number" value={formData.teamSizeMin} onChange={(e) => setFormData({ ...formData, teamSizeMin: parseInt(e.target.value) || '' })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. 1" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Max Team Size <span className="text-red-600">*</span></label>
+                    <input type="number" value={formData.maxTeamSize} onChange={(e) => setFormData({ ...formData, maxTeamSize: parseInt(e.target.value) || '' })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. 4" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Domains <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.domains} onChange={(e) => setFormData({ ...formData, domains: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. Web, App, AI" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Problem Statement PDF (optional)</label>
+                    <input type="file" accept=".pdf" onChange={(e) => handleImageUpload(e, 'problemStatementPdf')} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <input type="checkbox" id="teamAllowed" checked={formData.teamFormationAllowed} onChange={(e) => setFormData({ ...formData, teamFormationAllowed: e.target.checked })} className="w-4 h-4 text-primary-600" />
+                  <label htmlFor="teamAllowed" className="text-sm font-medium text-gray-700">Allow in-app Team Formation</label>
+                </div>
+              </section>
+            )}
+
+            {formData.category === 'Competition' && (
+              <section>
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-green-700">Competition Details</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Competition Type <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.competitionType} onChange={(e) => setFormData({ ...formData, competitionType: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. Ideathon, Coding, Design" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Rules (link or text) <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.rules} onChange={(e) => setFormData({ ...formData, rules: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {formData.category === 'Workshop' && (
+              <section>
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-blue-700">Workshop Details</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Speaker Name</label>
+                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Speaker Designation</label>
+                    <input type="text" value={formData.speakerDesignation} onChange={(e) => setFormData({ ...formData, speakerDesignation: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Organization</label>
+                    <input type="text" value={formData.organization} onChange={(e) => setFormData({ ...formData, organization: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Certificate Provided</label>
+                    <select value={formData.certificateProvided ? "Yes" : "No"} onChange={(e) => setFormData({ ...formData, certificateProvided: e.target.value === "Yes" })} className="w-full px-4 py-2 border rounded-lg">
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {formData.category === 'Seminar' && (
+              <section>
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-orange-700">Seminar Details</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Speaker Name</label>
+                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Seminar Topic</label>
+                    <input type="text" value={formData.seminarTopic} onChange={(e) => setFormData({ ...formData, seminarTopic: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Certificate Provided</label>
+                    <select value={formData.certificateProvided ? "Yes" : "No"} onChange={(e) => setFormData({ ...formData, certificateProvided: e.target.value === "Yes" })} className="w-full px-4 py-2 border rounded-lg">
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+            )}
 
           {/* Section 6: Media */}
           <section>
@@ -671,6 +874,7 @@ function EventModal({ event, onClose, onSubmit }) {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   )

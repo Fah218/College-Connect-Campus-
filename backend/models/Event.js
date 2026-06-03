@@ -18,10 +18,18 @@ const eventSchema = new mongoose.Schema({
   location: { type: String, required: true },
   category: { 
     type: String,
-    enum: ['Workshop', 'Seminar', 'Hackathon', 'Competition'],
+    enum: ['Workshop', 'Seminar', 'Hackathon', 'Competition', 'Club Activity'],
     default: 'Workshop'
   },
   tags: [{ type: String }],
+  
+  // Contact details (Common)
+  contactName: { type: String, required: true },
+  contactEmail: { type: String, required: true },
+  contactPhone: { type: String, required: true },
+  
+  // Eligibility (Common)
+  eligibility: { type: String, required: true },
   participationType: {
     type: String,
     enum: ['Individual', 'Team'],
@@ -30,6 +38,26 @@ const eventSchema = new mongoose.Schema({
   maxParticipants: { type: Number },
   maxTeamSize: { type: Number },
   bannerImage: { type: String },
+  
+  // Hackathon specific
+  prizePool: { type: String },
+  teamSizeMin: { type: Number },
+  teamFormationAllowed: { type: Boolean, default: true },
+  winnerRewards: { type: String },
+  problemStatementPdf: { type: String }, // optional PDF
+  domains: { type: String },
+
+  // Competition specific
+  competitionType: { type: String },
+  rules: { type: String },
+
+  // Workshop / Seminar specific
+  speakerName: { type: String },
+  speakerDesignation: { type: String },
+  organization: { type: String },
+  certificateProvided: { type: Boolean, default: false },
+  seminarTopic: { type: String },
+
   clubName: { 
     type: String, 
     required: true
