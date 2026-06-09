@@ -40,7 +40,14 @@ export const useAnalyticsStore = create((set, get) => ({
     // Domain popularity
     const domainCounts = {}
     events.forEach(event => {
-      event.domains?.forEach(domain => {
+      let domainList = []
+      if (typeof event.domains === 'string') {
+        domainList = event.domains.split(',').map(d => d.trim()).filter(Boolean)
+      } else if (Array.isArray(event.domains)) {
+        domainList = event.domains
+      }
+      
+      domainList.forEach(domain => {
         domainCounts[domain] = (domainCounts[domain] || 0) + (event.attendees || 0)
       })
     })

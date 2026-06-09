@@ -2,27 +2,59 @@ import { useState } from 'react'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { User, Award, Calendar, Users, Edit } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { useEventStore } from '../store/eventStore'
 import Navbar from '../components/Navbar'
 import ProfileEditForm from '../components/ProfileEditForm'
 
 export default function StudentProfilePage() {
   const { user } = useAuthStore()
+  const { events, registeredEvents } = useEventStore()
   const [isEditing, setIsEditing] = useState(false)
   
-  const skillData = user?.skills?.map(skill => ({ skill, proficiency: 75 })) || [
-    { skill: 'React', proficiency: 85 },
-    { skill: 'Python', proficiency: 75 },
-    { skill: 'Node.js', proficiency: 70 },
-    { skill: 'ML', proficiency: 60 },
-    { skill: 'Design', proficiency: 55 }
-  ]
+  // 1. Skill Proficiency
+  const skillData = user?.skills?.length > 0 
+    ? user.skills.map(skill => ({ skill, proficiency: 70 + Math.floor(Math.random() * 20) })) 
+    : [
+      { skill: 'React', proficiency: 85 },
+      { skill: 'Python', proficiency: 75 },
+      { skill: 'Node.js', proficiency: 70 },
+      { skill: 'ML', proficiency: 60 },
+      { skill: 'Design', proficiency: 55 }
+    ]
   
-  const participationData = [
-    { month: 'Sep', events: 3 },
-    { month: 'Oct', events: 5 },
-    { month: 'Nov', events: 4 },
-    { month: 'Dec', events: 6 }
-  ]
+  // Find the actual event objects the user is registered for
+  const userEvents = (events || []).filter(e => (registeredEvents || []).includes(e.id) || (registeredEvents || []).includes(e._id))
+
+  // 2. Event Counts
+  const today = new Date()
+  const upcomingEvents = userEvents.filter(e => new Date(e.date || e.startDate) >= today)
+  const attendedEvents = userEvents.filter(e => new Date(e.date || e.startDate) < today)
+
+  // 3. Event Participation History
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const participationCounts = {}
+  userEvents.forEach(e => {
+    const d = new Date(e.date || e.startDate)
+    if (!isNaN(d.getTime())) {
+      const month = months[d.getMonth()]
+      participationCounts[month] = (participationCounts[month] || 0) + 1
+    }
+  })
+  
+  const participationData = Object.keys(participationCounts).length > 0
+    ? Object.keys(participationCounts).map(month => ({ month, events: participationCounts[month] }))
+    : [
+        { month: 'Sep', events: 3 },
+        { month: 'Oct', events: 5 },
+        { month: 'Nov', events: 4 },
+        { month: 'Dec', events: 6 }
+      ]
+
+  // 4. Clubs Interaction
+  const uniqueClubs = [...new Set(userEvents.map(e => e.club).filter(Boolean))]
+
+  // 5. Hackathon Experience
+  const hackathons = userEvents.filter(e => e.category === 'Hackathon')
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,17 +94,25 @@ export default function StudentProfilePage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Skills Radar Chart */}
+              {/* Skills Progress Bars */}
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="text-lg font-semibold mb-4">Skill Proficiency</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <RadarChart data={skillData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="skill" />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar name="Proficiency" dataKey="proficiency" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  {skillData.map((s, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">{s.skill}</span>
+                        <span className="text-sm font-medium text-gray-500">{s.proficiency}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-primary-600 h-2 rounded-full transition-all duration-500" 
+                          style={{ width: `${s.proficiency}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Interests Section */}
@@ -111,28 +151,24 @@ export default function StudentProfilePage() {
             
             {/* Stats Grid */}
             <div className="grid md:grid-cols-3 gap-4">
-              <StatBox icon={Calendar} label="Events Registered" value="24" color="blue" />
-              <StatBox icon={Award} label="Events Attended" value="18" color="green" />
-              <StatBox icon={Users} label="Upcoming Events" value="6" color="purple" />
+              <StatBox icon={Calendar} label="Events Registered" value={userEvents.length.toString()} color="blue" />
+              <StatBox icon={Award} label="Events Attended" value={attendedEvents.length.toString()} color="green" />
+              <StatBox icon={Users} label="Upcoming Events" value={upcomingEvents.length.toString()} color="purple" />
             </div>
             
             {/* Clubs Interaction */}
             <div>
               <h3 className="text-lg font-semibold mb-3">🏫 Clubs Interaction</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-lg border">
-                  <h4 className="font-medium text-gray-700 mb-2">Clubs Joined</h4>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Tech Club</span>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">AI Club</span>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border">
-                  <h4 className="font-medium text-gray-700 mb-2">Clubs Interacted With</h4>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Coding Club</span>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Robotics Society</span>
-                  </div>
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-medium text-gray-700 mb-2">Clubs Interacted With</h4>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueClubs.length > 0 ? (
+                    uniqueClubs.map((club, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{club}</span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm">No club interactions yet.</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -141,20 +177,19 @@ export default function StudentProfilePage() {
             <div>
               <h3 className="text-lg font-semibold mb-3">Hackathon Experience</h3>
               <div className="space-y-3">
-                {[
-                  { name: 'AI Innovation Challenge', position: '2nd Place', date: 'Dec 2024' },
-                  { name: 'Web Dev Sprint', position: 'Participant', date: 'Nov 2024' }
-                ].map((hack, i) => (
+                {hackathons.length > 0 ? hackathons.map((hack, i) => (
                   <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium">{hack.name}</p>
-                      <p className="text-sm text-gray-600">{hack.date}</p>
+                      <p className="font-medium">{hack.title}</p>
+                      <p className="text-sm text-gray-600">{new Date(hack.date || hack.startDate).toLocaleDateString()}</p>
                     </div>
                     <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
-                      {hack.position}
+                      Participant
                     </span>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-gray-500 text-sm p-3 bg-gray-50 rounded-lg">No hackathon experience yet.</p>
+                )}
               </div>
             </div>
           </div>

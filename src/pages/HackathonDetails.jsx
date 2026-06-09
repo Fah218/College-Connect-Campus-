@@ -71,8 +71,17 @@ export default function HackathonDetails() {
     mode: raw.mode || 'Offline',
     maxParticipants: raw.maxParticipants || raw.capacity,
     tags: raw.tags || (raw.domain ? [raw.domain] : []),
-    prize: raw.prize,
+    prize: raw.prizePool || raw.prize,
     bannerImage: raw.bannerImage,
+    contactName: raw.contactName,
+    contactEmail: raw.contactEmail,
+    contactPhone: raw.contactPhone,
+    eligibility: raw.eligibility,
+    domains: raw.domains,
+    winnerRewards: raw.winnerRewards,
+    problemStatementPdf: raw.problemStatementPdf,
+    teamSizeMin: raw.teamSizeMin,
+    teamFormationAllowed: raw.teamFormationAllowed !== undefined ? raw.teamFormationAllowed : true,
     club: raw.club,
   }
 
@@ -162,6 +171,46 @@ export default function HackathonDetails() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Dynamic Hackathon Info Section */}
+        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+          <h2 className="text-xl font-bold mb-4">Event Details</h2>
+          <div className="grid md:grid-cols-2 gap-y-4 gap-x-8 text-gray-700">
+            {h.eligibility && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase">Eligibility</p>
+                <p className="font-medium">{h.eligibility}</p>
+              </div>
+            )}
+            {h.domains && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase">Domains</p>
+                <p className="font-medium">{h.domains}</p>
+              </div>
+            )}
+            {h.winnerRewards && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase">Winner Rewards</p>
+                <p className="font-medium">{h.winnerRewards}</p>
+              </div>
+            )}
+            {h.contactName && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase">Contact</p>
+                <p className="font-medium">{h.contactName} ({h.contactPhone})</p>
+                <p className="text-sm text-blue-600"><a href={`mailto:${h.contactEmail}`}>{h.contactEmail}</a></p>
+              </div>
+            )}
+            {h.problemStatementPdf && (
+              <div className="md:col-span-2 pt-2 border-t mt-2">
+                <p className="text-sm font-semibold text-gray-500 uppercase mb-2">Resources</p>
+                <a href={h.problemStatementPdf} download={`${h.title.replace(/\s+/g, '_')}_Problem_Statement.pdf`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-semibold transition border border-purple-200">
+                  📄 Download Problem Statement
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Description Section */}

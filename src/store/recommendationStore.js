@@ -17,12 +17,19 @@ export const useRecommendationStore = create((set, get) => ({
         let reasons = []
         
         // Domain matching
-        const domainMatch = event.domains?.some(d => 
+        let domainList = []
+        if (typeof event.domains === 'string') {
+          domainList = event.domains.split(',').map(d => d.trim()).filter(Boolean)
+        } else if (Array.isArray(event.domains)) {
+          domainList = event.domains
+        }
+
+        const domainMatch = domainList.some(d => 
           userPreferences.domains.includes(d)
         )
         if (domainMatch) {
           score += 3
-          reasons.push(`Matches your interest in ${event.domains.join(', ')}`)
+          reasons.push(`Matches your interest in ${domainList.join(', ')}`)
         }
         
         // Club matching

@@ -43,6 +43,7 @@ export default function HackathonPage() {
         mode:        e.mode,
         maxParticipants: e.maxParticipants,
         bannerImage: e.bannerImage,
+        problemStatementPdf: e.problemStatementPdf,
         club:        e.club,
         source:      'event'
       })),
@@ -227,10 +228,15 @@ function HackathonCard({ hackathon: h }) {
             <p className="text-xs text-gray-400 mt-auto">by {h.club}</p>
           )}
 
-          <div className="mt-3 pt-3 border-t">
+          <div className="mt-3 pt-3 border-t flex justify-between items-center">
             <span className="text-sm font-semibold text-primary-600 group-hover:text-primary-700">
               View Details →
             </span>
+            {h.problemStatementPdf && (
+              <a href={h.problemStatementPdf} download={`${h.title.replace(/\s+/g, '_')}_Problem_Statement.pdf`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded border border-purple-200 transition">
+                📄 PDF
+              </a>
+            )}
           </div>
         </div>
       </div>

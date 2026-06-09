@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { GraduationCap } from 'lucide-react'
@@ -11,7 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const login = useAuthStore(state => state.login)
+  const { login, isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
   
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,7 +57,7 @@ export default function LoginPage() {
         club_head: '/club-head',
         admin: '/admin'
       }
-      navigate(routes[role])
+      navigate(routes[role], { replace: true })
     } catch (err) {
        setError(err.response?.data?.message || 'Error occurred during login. Please check credentials and role.');
     } finally {

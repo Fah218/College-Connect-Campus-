@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Calendar, Trophy, BarChart3, Users, Zap, Shield } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
 
 export default function HomePage() {
+  const { isAuthenticated, user } = useAuthStore()
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
       <Navbar />
@@ -24,9 +26,15 @@ export default function HomePage() {
             <Link to="/hackathons" className="px-8 py-3 bg-white text-primary-600 border-2 border-primary-600 rounded-lg font-medium hover:bg-primary-50 transition">
               Join Hackathons
             </Link>
-            <Link to="/login" className="px-8 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
-              Login
-            </Link>
+            {isAuthenticated ? (
+              <Link to={user?.role === 'admin' || user?.role === 'Admin' ? '/admin' : user?.role === 'club_head' || user?.role === 'ClubHead' ? '/club-head' : '/student'} className="px-8 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link to="/login" className="px-8 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </section>

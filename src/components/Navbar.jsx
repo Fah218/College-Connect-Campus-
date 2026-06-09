@@ -19,7 +19,7 @@ export default function Navbar() {
     if (allNotifs.length === 0) return
 
     allNotifs.forEach(n => {
-      if (!syncedNotifIds.current.has(n.id)) {
+      if (!n.read && !syncedNotifIds.current.has(n.id)) {
         syncedNotifIds.current.add(n.id)
         addNotification({
           title: n.type === 'join_request' ? '🔔 New Join Request' : '✅ Team Request Accepted',
