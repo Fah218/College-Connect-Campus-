@@ -84,6 +84,8 @@ export const useHackathonStore = create(
               description: tr.description || '',
               requiredRoles: tr.rolesNeeded || tr.roles || [],
               requiredSkills: tr.requiredSkills || tr.skills || [],
+              teamSizeLimit: tr.teamSizeLimit || 4,
+              status: tr.status || 'open',
               owner: { id: tr.createdBy || 'unknown' }, // map back to owner for UI compatibility
               members: [ownerMember, ...acceptedMembers]
             };
@@ -249,47 +251,54 @@ export const useHackathonStore = create(
           await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
           
           set(state => {
-            const jr = state.joinRequests.find(j => j._id === joinRequestId)
+            const jr = state.joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId))
             if (!jr) return {}
 
             const updatedJRs = state.joinRequests.map(j =>
-              j._id === joinRequestId ? { ...j, status: 'accepted' } : j
+              (String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId)) ? { ...j, status: 'accepted' } : j
             )
 
             // add sender to team members
-            const updatedTRs = state.teamRequests.map(tr =>
-              tr._id === jr.teamRequestId
-                ? {
-                    ...tr,
-                    members: tr.members.some(m => String(m.id) === String(jr.sender.id))
-                      ? tr.members
-                      : [...tr.members, jr.sender]
-                  }
-                : tr
-            )
+            const updatedTRs = state.teamRequests.map(tr => {
+              if (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) {
+                const members = tr.members || [];
+                const isMember = members.some(m => String(m.id) === String(jr.sender?.id));
+                const newMembers = isMember ? members : [...members, jr.sender];
+                
+                // Also check if full
+                const isFull = newMembers.length >= (tr.teamSizeLimit || 4);
+                
+                return {
+                  ...tr,
+                  members: newMembers,
+                  status: isFull ? 'full' : tr.status
+                };
+              }
+              return tr;
+            })
 
-          // notify the sender (User B)
-          const senderId = String(jr.sender?.id)
-          const teamReq  = state.teamRequests.find(tr => tr._id === jr.teamRequestId)
-          const prevSenderNotifs = state.userNotifications[senderId] || []
-          const newNotif = {
-            id:        Date.now().toString() + 'a',
-            text:      `✅ Your request to join "${teamReq?.teamName || 'the team'}" was accepted!`,
-            type:      'accepted',
-            read:      false,
-            createdAt: new Date().toISOString(),
-            meta:      { teamRequestId: jr.teamRequestId, hackathonId: jr.hackathonId }
-          }
-
-          return {
-            joinRequests:      updatedJRs,
-            teamRequests:      updatedTRs,
-            userNotifications: {
-              ...state.userNotifications,
-              [senderId]: [newNotif, ...prevSenderNotifs]
+            // notify the sender (User B)
+            const senderId = String(jr.sender?.id)
+            const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId))
+            const prevSenderNotifs = state.userNotifications[senderId] || []
+            const newNotif = {
+              id:        Date.now().toString() + 'a',
+              text:      `✅ Your request to join "${teamReq?.teamName || 'the team'}" was accepted!`,
+              type:      'accepted',
+              read:      false,
+              createdAt: new Date().toISOString(),
+              meta:      { teamRequestId: jr.teamRequestId, hackathonId: jr.hackathonId }
             }
-          }
-        })
+
+            return {
+              joinRequests:      updatedJRs,
+              teamRequests:      updatedTRs,
+              userNotifications: {
+                ...state.userNotifications,
+                [senderId]: [newNotif, ...prevSenderNotifs]
+              }
+            }
+          })
         } catch (error) {
           console.error("Failed to accept join request", error);
         }

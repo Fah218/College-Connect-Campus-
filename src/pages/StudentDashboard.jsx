@@ -14,15 +14,31 @@ import { format } from 'date-fns'
 
 export default function StudentDashboard() {
   const { events, registeredEvents, registerForEvent } = useEventStore()
-  const { hackathons } = useHackathonStore()
+  const { hackathons, teamRequests, joinRequests, fetchHackathonData } = useHackathonStore()
   const { getRecommendedEvents } = useRecommendationStore()
-  const { addNotification } = useAuthStore()
+  const { addNotification, user } = useAuthStore()
   const { reminders, calendarItems, removeReminder, removeCalendarItem } = useCalendarStore()
+  
+  useEffect(() => {
+    fetchHackathonData?.()
+  }, [])
   const [filter, setFilter] = useState({ category: 'all', search: '' })
   const [view, setView] = useState('list')
   
   const approvedEvents = events.filter(e => e.status === 'approved')
   const recommendations = getRecommendedEvents(approvedEvents, registeredEvents)
+
+  const joinedHackathonsCount = (teamRequests || []).filter(tr => tr.members?.some(m => String(m.id) === String(user?.id))).length;
+  
+  const teamInvitationsCount = (joinRequests || []).filter(jr => 
+    jr.status === 'pending' && 
+    (teamRequests || []).some(tr => 
+      (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) && 
+      String(tr.owner?.id) === String(user?.id)
+    )
+  ).length;
+
+  const upcomingEventsCount = approvedEvents.filter(e => new Date(e.date) >= new Date(new Date().setHours(0,0,0,0))).length;
   
   const filteredEvents = approvedEvents.filter(event => {
     const matchesCategory = filter.category === 'all' || event.category === filter.category
@@ -67,19 +83,19 @@ export default function StudentDashboard() {
           <StatCard
             icon={Trophy}
             title="Joined Hackathons"
-            value={2}
+            value={joinedHackathonsCount}
             color="green"
           />
           <StatCard
             icon={Users}
             title="Team Invitations"
-            value={3}
+            value={teamInvitationsCount}
             color="purple"
           />
           <StatCard
             icon={Calendar}
             title="Upcoming Events"
-            value={approvedEvents.length}
+            value={upcomingEventsCount}
             color="orange"
           />
         </div>

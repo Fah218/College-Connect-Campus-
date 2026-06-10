@@ -89,14 +89,16 @@ export default function HackathonDetails() {
   const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id) : null
   const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id) || []).filter(j => String(j.hackathonId) === h.id) : []
   
-  // Both Team Lead AND Members can see the inbox to help fulfill the limit
-  const teamInbox = user && myTeam ? (store.joinRequests || []).filter(jr => 
-    jr.teamRequestId === myTeam._id
+  const isTeamOwner = myTeam && user && String(myTeam.owner?.id) === String(user.id);
+
+  // Only Team Lead can see the inbox
+  const teamInbox = isTeamOwner ? (store.joinRequests || []).filter(jr => 
+    String(jr.teamRequestId) === String(myTeam._id) || String(jr.teamRequestId) === String(myTeam.id)
   ) : []
   const pendingInbox = teamInbox.filter(j => j.status === 'pending')
 
-  // Calculate max team size from string like "Up to 4" or "4"
-  const hMaxTeamSize = parseInt(String(h.teamSize).replace(/\D/g, '')) || 4;
+  // Calculate max team size from string like "Up to 4" or "4", but myTeam already has teamSizeLimit
+  const hMaxTeamSize = myTeam?.teamSizeLimit || parseInt(String(h.teamSize).replace(/\D/g, '')) || 4;
 
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
@@ -298,8 +300,20 @@ export default function HackathonDetails() {
           {myTeam && (
             <div className="mb-6 p-4 bg-primary-50 border border-primary-100 rounded-xl">
               <div className="flex justify-between items-center mb-3">
-                <p className="font-bold text-primary-800">My Team: {myTeam.teamName || 'Team'}</p>
-                <div className="px-2 py-1 bg-primary-600 text-white text-[10px] rounded font-bold uppercase">Active</div>
+                <div>
+                  <p className="font-bold text-primary-800 text-lg">My Team: {myTeam.teamName || 'Team'}</p>
+                  <p className="text-xs font-semibold text-primary-600 mt-1">{(myTeam.members || []).length} / {hMaxTeamSize} Members ({hMaxTeamSize - (myTeam.members || []).length} slots remaining)</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`px-2 py-1 text-white text-[10px] rounded font-bold uppercase ${myTeam.status === 'full' ? 'bg-red-500' : 'bg-primary-600'}`}>
+                    {myTeam.status === 'full' ? 'Team Full' : 'Recruiting'}
+                  </div>
+                  {isTeamOwner && myTeam.status !== 'full' && (
+                    <button onClick={() => setShowInbox(!showInbox)} className="px-3 py-1 bg-white border border-primary-300 text-primary-700 text-[10px] font-bold rounded shadow-sm hover:bg-primary-50">
+                      {showInbox ? 'Hide Requests' : `View Join Requests (${pendingInbox.length})`}
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -335,19 +349,20 @@ export default function HackathonDetails() {
               </div>
               {requests.map(req => {
                 const memberCount = (req.members || []).length;
-                // If team is full, do not show the team request
-                if (memberCount >= hMaxTeamSize) return null;
+                const reqTeamSizeLimit = req.teamSizeLimit || hMaxTeamSize;
+                // If team is full, do not show the team request in the browse list
+                if (req.status === 'full' || memberCount >= reqTeamSizeLimit) return null;
 
                 const isOwner = user?.id && req.owner?.id && String(req.owner.id) === String(user.id)
                 const isMember = user?.id && (req.members || []).some(m => m && String(m.id || m._id || '') === String(user.id))
-                const myJR = user?.id && myJoinReqs.find(j => j.teamRequestId === req._id)
+                const myJR = user?.id && myJoinReqs.find(j => String(j.teamRequestId) === String(req._id) || String(j.teamRequestId) === String(req.id))
 
                 return (
                   <div key={req._id} className="border rounded-xl p-4 bg-gray-50 hover:border-primary-200 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-bold text-gray-900">{String(req.teamName || 'Unnamed Team')}</p>
-                        <p className="text-xs font-semibold text-primary-600 mt-0.5">{memberCount} / {hMaxTeamSize} Members</p>
+                        <p className="text-xs font-semibold text-primary-600 mt-0.5">{memberCount} / {reqTeamSizeLimit} Members</p>
                       </div>
                       <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
                         Request

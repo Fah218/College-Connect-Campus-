@@ -5,6 +5,15 @@ export const createTeamRequest = async (req, res) => {
   try {
     const { hackathonId, createdBy, title, description, rolesNeeded, requiredSkills, teamSizeLimit, currentMembers, status } = req.body;
     
+    // Check if user already has an active team request for this hackathon
+    const existingRequest = await TeamRequest.findOne({ hackathonId, createdBy, status: { $in: ['open', 'full'] } });
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have an active team request for this hackathon'
+      });
+    }
+
     const newTeamRequest = new TeamRequest({
       hackathonId,
       createdBy,
@@ -12,7 +21,7 @@ export const createTeamRequest = async (req, res) => {
       description,
       rolesNeeded: rolesNeeded || req.body.roles || [], // fallback for existing frontend payload
       requiredSkills: requiredSkills || req.body.skills || [], // fallback for existing frontend payload
-      teamSizeLimit,
+      teamSizeLimit: teamSizeLimit || 4,
       currentMembers: currentMembers || [],
       status: status || 'open'
     });
@@ -58,6 +67,24 @@ export const createJoinRequest = async (req, res) => {
   try {
     const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
     
+    // Check if duplicate join request
+    const existingJoinRequest = await JoinRequest.findOne({ teamRequestId, applicantId });
+    if (existingJoinRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already sent a join request to this team'
+      });
+    }
+
+    // Check if user is already a member of an accepted team in this hackathon
+    const alreadyInTeam = await JoinRequest.findOne({ hackathonId, applicantId, status: 'accepted' });
+    if (alreadyInTeam) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already in a team for this hackathon'
+      });
+    }
+
     const newJoinRequest = new JoinRequest({
       teamRequestId,
       hackathonId: hackathonId || 'unknown', // fallback
@@ -133,11 +160,27 @@ export const updateJoinRequestStatus = async (req, res) => {
         );
         
         if (!isMember) {
+          // Add +1 for the lead that is implicitly in the team
+          const currentSize = teamRequest.currentMembers.length + 1;
+          
+          if (currentSize >= teamRequest.teamSizeLimit) {
+            // Revert join request to pending if team is already full
+            joinRequest.status = 'pending';
+            await joinRequest.save();
+            return res.status(400).json({ success: false, message: 'Team is already full' });
+          }
+
           teamRequest.currentMembers.push({
             id: joinRequest.applicantId,
             name: joinRequest.applicantName,
             skills: joinRequest.applicantSkills || []
           });
+          
+          // Check if full after adding
+          if (teamRequest.currentMembers.length + 1 >= teamRequest.teamSizeLimit) {
+            teamRequest.status = 'full';
+          }
+          
           await teamRequest.save();
         }
       }
