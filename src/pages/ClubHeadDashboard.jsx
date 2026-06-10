@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
+import { useClubStore } from '../store/clubStore'
 import Navbar from '../components/Navbar'
 import StatCard from '../components/StatCard'
 import Timeline from '../components/Timeline'
@@ -23,6 +24,15 @@ export default function ClubHeadDashboard() {
   
   const { user } = useAuthStore()
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
+  
+  const { clubs, fetchClubs } = useClubStore()
+  useEffect(() => {
+    fetchClubs()
+  }, [])
+  
+  const isArchived = useMemo(() => {
+    return clubs.some(c => c.clubName && c.clubName.toLowerCase() === currentClubName && c.isArchived)
+  }, [clubs, currentClubName])
   
   const myEvents = events.filter(e => {
     const eventClub = (e.club || e.clubName || '').trim().toLowerCase()
@@ -76,14 +86,29 @@ export default function ClubHeadDashboard() {
           <h1 className="text-3xl font-bold">Dashboard: <span className="text-primary-600 capitalize">{currentClubName}</span></h1>
           <div className="flex gap-2">
             <ExportButton data={exportData} filename="club_events" type="csv" />
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              <Plus size={20} />
-              Create Event
-            </button>
           </div>
+        </div>
+
+        {isArchived && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl flex items-center gap-3 shadow-sm">
+            <Layout className="shrink-0" />
+            <div>
+              <p className="font-bold">Your club has been archived.</p>
+              <p className="text-sm">You can no longer create or edit events. Please contact the administrator for assistance.</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Actions */}
+        <div className="flex gap-4 mb-8">
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={isArchived}
+            className={`flex items-center gap-2 px-6 py-3 text-white rounded-lg font-medium transition ${isArchived ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700'}`}
+          >
+            <Plus size={20} />
+            Create Event
+          </button>
         </div>
         
         {/* Stats */}

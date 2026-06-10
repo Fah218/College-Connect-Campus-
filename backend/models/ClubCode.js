@@ -14,6 +14,10 @@ const clubCodeSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

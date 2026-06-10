@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
+import { useClubStore } from '../store/clubStore'
 import Navbar from '../components/Navbar'
 import StatCard from '../components/StatCard'
 import InsightCard from '../components/InsightCard'
@@ -19,6 +20,7 @@ export default function AdminDashboard() {
   const [viewingEvent, setViewingEvent] = useState(null)
   const [managingClub, setManagingClub] = useState(null)
   const [clubHeads, setClubHeads] = useState([])
+  const { clubs: realClubs, fetchClubs, toggleArchiveStatus } = useClubStore()
   
   useEffect(() => {
     const fetchClubHeads = async () => {
@@ -33,6 +35,7 @@ export default function AdminDashboard() {
       }
     }
     fetchClubHeads()
+    fetchClubs()
   }, [])
   
   const insights = generateInsights(events)
@@ -155,7 +158,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'clubs' && (
-              <ClubSection events={events} clubHeads={clubHeads} onManage={setManagingClub} />
+              <ClubSection events={events} clubHeads={clubHeads} onManage={setManagingClub} realClubs={realClubs} toggleArchiveStatus={toggleArchiveStatus} />
             )}
           </div>
         </div>
@@ -176,6 +179,7 @@ export default function AdminDashboard() {
         <ClubManagementModal 
           club={managingClub} 
           onClose={() => setManagingClub(null)} 
+          toggleArchiveStatus={toggleArchiveStatus}
         />
       )}
     </div>
@@ -613,7 +617,8 @@ function AuditSection({ logs }) {
   )
 }
 
-function ClubSection({ events, clubHeads, onManage }) {
+function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStatus }) {
+  const [showArchived, setShowArchived] = useState(false);
   const clubMap = {};
   
   (events || []).forEach(event => {
@@ -632,16 +637,40 @@ function ClubSection({ events, clubHeads, onManage }) {
         members: Math.floor(Math.random() * 40) + 20, // Mock member count
         events: 0,
         status: 'Active',
-        eventList: []
+        eventList: [],
+        isArchived: false,
+        realId: null
       };
     }
     clubMap[clubName].events += 1;
     clubMap[clubName].eventList.push(event);
   });
 
-  const clubs = Object.values(clubMap);
+  (realClubs || []).forEach(rc => {
+    if (clubMap[rc.clubName]) {
+      clubMap[rc.clubName].isArchived = rc.isArchived;
+      clubMap[rc.clubName].realId = rc._id;
+    } else {
+      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.toLowerCase() === rc.clubName.toLowerCase());
+      const realHead = headObj ? headObj.name : 'Pending Assignment';
+      clubMap[rc.clubName] = {
+        id: rc.clubName,
+        realId: rc._id,
+        name: rc.clubName,
+        head: realHead,
+        members: Math.floor(Math.random() * 40) + 20,
+        events: 0,
+        status: rc.active ? 'Active' : 'Inactive',
+        eventList: [],
+        isArchived: rc.isArchived
+      };
+    }
+  });
 
-  if (clubs.length === 0) {
+  const allClubs = Object.values(clubMap);
+  const displayedClubs = showArchived ? allClubs.filter(c => c.isArchived) : allClubs.filter(c => !c.isArchived);
+
+  if (allClubs.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-xl border">
         <p className="text-gray-500 font-medium">No clubs found. Create an event to register a club.</p>
@@ -650,21 +679,37 @@ function ClubSection({ events, clubHeads, onManage }) {
   }
   
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Club Name</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Club Head</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Members</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Events</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {clubs.map(club => (
-            <tr key={club.id}>
+    <div>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => setShowArchived(!showArchived)}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${showArchived ? 'bg-primary-600 text-white' : 'bg-white border text-gray-700 hover:bg-gray-50'}`}
+        >
+          {showArchived ? 'Show Active Clubs' : 'Show Archived Clubs'}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Club Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Club Head</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Members</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Events</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {displayedClubs.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                  {showArchived ? 'No archived clubs found.' : 'No active clubs found.'}
+                </td>
+              </tr>
+            ) : (
+              displayedClubs.map(club => (
+                <tr key={club.id}>
               <td className="px-6 py-4 font-medium">{club.name}</td>
               <td className="px-6 py-4">{club.head}</td>
               <td className="px-6 py-4">{club.members}</td>
@@ -682,14 +727,16 @@ function ClubSection({ events, clubHeads, onManage }) {
                 <button onClick={() => onManage(club)} className="text-primary-600 hover:text-primary-700 font-medium">Manage</button>
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
 
-function ClubManagementModal({ club, onClose }) {
+function ClubManagementModal({ club, onClose, toggleArchiveStatus }) {
   const [activeTab, setActiveTab] = useState('info')
 
   return (
@@ -854,10 +901,31 @@ function ClubManagementModal({ club, onClose }) {
                 </div>
               </div>
               <div className="pt-6 border-t border-red-100">
-                <h3 className="font-bold text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 mb-4">Permanently delete this club and all associated data.</p>
-                <button className="px-4 py-2 bg-red-600 text-white font-bold text-sm rounded-lg hover:bg-red-700 transition">
-                  Delete Club
+                <h3 className="font-bold text-red-600 mb-2">{club.isArchived ? 'Restore Club' : 'Danger Zone'}</h3>
+                <p className="text-sm text-gray-500 mb-4">{club.isArchived ? 'Restore this club to active status.' : 'Archive this club. All historical data will be preserved, but it will be hidden from active listings and unable to create new events.'}</p>
+                <button 
+                  onClick={async () => {
+                    if (!club.realId) {
+                      alert('This club cannot be archived because it does not exist in the database (it only has ghost events).');
+                      return;
+                    }
+                    if (!club.isArchived) {
+                      const confirm = window.confirm('Are you sure you want to archive this club? All historical data will be preserved.');
+                      if (confirm) {
+                        await toggleArchiveStatus(club.realId, true);
+                        onClose();
+                      }
+                    } else {
+                      const confirm = window.confirm('Are you sure you want to restore this club?');
+                      if (confirm) {
+                        await toggleArchiveStatus(club.realId, false);
+                        onClose();
+                      }
+                    }
+                  }}
+                  className={`px-4 py-2 font-bold text-sm rounded-lg transition ${club.isArchived ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                >
+                  {club.isArchived ? 'Restore Club' : 'Archive Club'}
                 </button>
               </div>
             </div>
@@ -868,4 +936,3 @@ function ClubManagementModal({ club, onClose }) {
     </div>
   )
 }
-

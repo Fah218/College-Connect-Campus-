@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
+import clubRoutes from './routes/clubRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/clubs', clubRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
