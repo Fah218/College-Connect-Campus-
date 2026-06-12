@@ -254,9 +254,18 @@ export const useHackathonStore = create(
             const jr = state.joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId))
             if (!jr) return {}
 
-            const updatedJRs = state.joinRequests.map(j =>
-              (String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId)) ? { ...j, status: 'accepted' } : j
-            )
+            const updatedJRs = state.joinRequests.map(j => {
+              if (String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId)) {
+                return { ...j, status: 'accepted' };
+              }
+              // Auto-reject other pending requests from the same user for the same hackathon
+              if (String(j.hackathonId) === String(jr.hackathonId) && 
+                  String(j.sender?.id) === String(jr.sender?.id) && 
+                  j.status === 'pending') {
+                return { ...j, status: 'rejected' };
+              }
+              return j;
+            });
 
             // add sender to team members
             const updatedTRs = state.teamRequests.map(tr => {
@@ -301,6 +310,10 @@ export const useHackathonStore = create(
           })
         } catch (error) {
           console.error("Failed to accept join request", error);
+          if (error.response && error.response.status === 400) {
+            alert(`Could not accept: ${error.response.data.message || 'Team is full or user already accepted.'}`);
+            throw new Error(error.response.data.message);
+          }
         }
       },
 

@@ -147,6 +147,18 @@ export const updateJoinRequestStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Join request not found' });
     }
 
+    // Pre-Acceptance Check
+    if (status === 'accepted') {
+      const alreadyInTeam = await JoinRequest.findOne({
+        hackathonId: joinRequest.hackathonId,
+        applicantId: joinRequest.applicantId,
+        status: 'accepted'
+      });
+      if (alreadyInTeam) {
+        return res.status(400).json({ success: false, message: 'User is already in another team for this hackathon.' });
+      }
+    }
+
     joinRequest.status = status;
     await joinRequest.save();
 
@@ -182,6 +194,14 @@ export const updateJoinRequestStatus = async (req, res) => {
           }
           
           await teamRequest.save();
+          
+          // Auto-reject other pending join requests for the same applicant in this hackathon
+          await JoinRequest.updateMany({
+            hackathonId: joinRequest.hackathonId,
+            applicantId: joinRequest.applicantId,
+            _id: { $ne: joinRequest._id },
+            status: 'pending'
+          }, { $set: { status: 'rejected' } });
         }
       }
     }
