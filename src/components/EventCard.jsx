@@ -2,27 +2,26 @@ import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, Tag, Bell, BellOff } from 'lucide-react'
 import { format } from 'date-fns'
 import { useState } from 'react'
-import { useAuthStore } from '../store/authStore'
+import { useCalendarStore } from '../store/calendarStore'
 
 export default function EventCard({ event, onRegister, isRegistered }) {
-  const { user, toggleSavedEvent } = useAuthStore()
+  const { addReminder, removeReminder, hasReminder } = useCalendarStore()
   const [toast, setToast] = useState(null)
-  
-  const eventIdStr = String(event.id || event._id)
-  const isSaved = (user?.savedEvents || []).includes(eventIdStr)
+
+  const reminded = hasReminder(event.id)
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleReminder = async () => {
-    if (!user) return showToast('Please login to save events.', 'info')
-    await toggleSavedEvent(eventIdStr)
-    if (isSaved) {
-      showToast('Event removed from saved list.', 'info')
+  const handleReminder = () => {
+    if (reminded) {
+      removeReminder(event.id)
+      showToast('Reminder removed.', 'info')
     } else {
-      showToast(`🔔 Event "${event.title}" saved!`)
+      addReminder(event)
+      showToast(`⏰ Reminder set for "${event.title}"!`)
     }
   }
 
@@ -75,6 +74,21 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         ))}
       </div>
 
+      {/* ── Reminder Button ── */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={handleReminder}
+          title={reminded ? 'Remove reminder' : 'Remind me before registration deadline'}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium border transition
+            ${reminded
+              ? 'bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
+              : 'border-yellow-400 text-yellow-700 hover:bg-yellow-50'}`}
+        >
+          {reminded ? <BellOff size={15} /> : <Bell size={15} />}
+          {reminded ? 'Reminder Set ✓' : 'Set Reminder'}
+        </button>
+      </div>
+
       {/* Registration deadline badge (if available) */}
       {event.registrationDeadlineDate && !isRegistered && (
         <p className="text-xs text-red-500 mb-3 font-medium">
@@ -83,36 +97,14 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         </p>
       )}
 
-      {/* Action buttons */}
+      {/* Register button */}
       {onRegister && (
-        isRegistered ? (
-          <button
-            disabled
-            className="w-full py-2 rounded-lg font-medium bg-green-50 text-green-700 border border-green-200 cursor-not-allowed"
-          >
-            Registered ✓
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <Link
-              to={`/events/${eventIdStr}/register`}
-              className="flex-1 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 text-center"
-            >
-              Register Now
-            </Link>
-            <button
-              onClick={handleReminder}
-              title={isSaved ? 'Remove from saved' : 'Save Event'}
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium border transition
-                ${isSaved
-                  ? 'bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
-                  : 'border-yellow-400 text-yellow-700 hover:bg-yellow-50'}`}
-            >
-              {isSaved ? null : <Bell size={15} />}
-              {isSaved ? 'Saved ✓' : 'Save Event'}
-            </button>
-          </div>
-        )
+        <Link
+          to={`/events/${event.id || event._id}/register`}
+          className="block w-full py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 text-center"
+        >
+          Register Now
+        </Link>
       )}
     </div>
   )

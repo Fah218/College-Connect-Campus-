@@ -42,22 +42,6 @@ export const useAuthStore = create(
       hasRole: (role) => {
         const state = useAuthStore.getState()
         return state.user?.role === role
-      },
-      toggleSavedEvent: async (eventId) => {
-        const state = useAuthStore.getState()
-        if (!state.user) return
-
-        const savedEvents = state.user.savedEvents || []
-        const isSaved = savedEvents.includes(eventId)
-
-        set((state) => ({
-          user: {
-            ...state.user,
-            savedEvents: isSaved 
-              ? savedEvents.filter(id => String(id) !== String(eventId))
-              : [...savedEvents, eventId]
-          }
-        }))
       }
     }),
     {

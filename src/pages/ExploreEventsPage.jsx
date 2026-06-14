@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useEventStore } from '../store/eventStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
-import { Search, Filter, Calendar, MapPin, Tag, Layers, X } from 'lucide-react'
+import Timeline from '../components/Timeline'
+import { Search, Filter, Calendar, MapPin, Tag, Layers, X, Monitor, List, Layout, ArrowUpDown } from 'lucide-react'
 import { format } from 'date-fns'
 
 const CATEGORIES = ['All', 'Workshop', 'Seminar', 'Hackathon', 'Competition']
@@ -14,6 +15,9 @@ export default function ExploreEventsPage() {
   const [category, setCategory]       = useState('All')
   const [clubFilter, setClubFilter]   = useState('All')
   const [dateFilter, setDateFilter]   = useState('')
+  const [modeFilter, setModeFilter]   = useState('All')
+  const [sortBy, setSortBy]           = useState('Newest')
+  const [view, setView]               = useState('list')
 
   // Show all events (including pending) so creators can see them immediately
   const approved = useMemo(() => events, [events])
@@ -25,24 +29,54 @@ export default function ExploreEventsPage() {
   }, [approved])
 
   const filtered = useMemo(() => {
-    return approved.filter(event => {
+    let result = approved.filter(event => {
       const matchCat   = category === 'All' || event.category === category
       const matchClub  = clubFilter === 'All' || event.club === clubFilter
       const matchDate  = !dateFilter || (event.startDate || event.date || '').startsWith(dateFilter)
       const matchSearch = !search || event.title.toLowerCase().includes(search.toLowerCase()) ||
         (event.shortDescription || event.description || '').toLowerCase().includes(search.toLowerCase())
-      return matchCat && matchClub && matchDate && matchSearch
+      
+      let matchMode = true
+      if (modeFilter !== 'All') {
+        const isOnline = /online|zoom|meet|teams|virtual|webex/i.test(event.location || '')
+        if (modeFilter === 'Online') matchMode = isOnline
+        if (modeFilter === 'Offline') matchMode = !isOnline
+      }
+      
+      return matchCat && matchClub && matchDate && matchSearch && matchMode
     })
-  }, [approved, category, clubFilter, dateFilter, search])
+
+    result.sort((a, b) => {
+      if (sortBy === 'Event Date') {
+        return new Date(a.date || a.startDate || 0) - new Date(b.date || b.startDate || 0)
+      }
+      if (sortBy === 'Deadline Soon') {
+        const aDeadline = a.registrationDeadlineDate ? new Date(a.registrationDeadlineDate).getTime() : Infinity
+        const bDeadline = b.registrationDeadlineDate ? new Date(b.registrationDeadlineDate).getTime() : Infinity
+        return aDeadline - bDeadline
+      }
+      if (sortBy === 'Most Popular') {
+        return (b.attendees || 0) - (a.attendees || 0)
+      }
+      
+      // Newest
+      const aId = typeof a.id === 'number' ? a.id : (a._id ? parseInt(a._id.toString().slice(0,8), 16) : 0)
+      const bId = typeof b.id === 'number' ? b.id : (b._id ? parseInt(b._id.toString().slice(0,8), 16) : 0)
+      return bId - aId
+    })
+
+    return result
+  }, [approved, category, clubFilter, dateFilter, search, modeFilter, sortBy])
 
   const clearFilters = () => {
     setSearch('')
     setCategory('All')
     setClubFilter('All')
     setDateFilter('')
+    setModeFilter('All')
   }
 
-  const hasActiveFilters = search || category !== 'All' || clubFilter !== 'All' || dateFilter
+  const hasActiveFilters = search || category !== 'All' || clubFilter !== 'All' || dateFilter || modeFilter !== 'All'
 
   const catCounts = useMemo(() => {
     return CATEGORIES.slice(1).reduce((acc, cat) => {
@@ -149,6 +183,22 @@ export default function ExploreEventsPage() {
                 )}
               </div>
 
+              {/* Mode filter */}
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+                  <Monitor size={12} className="inline mr-1" /> Event Mode
+                </label>
+                <select
+                  value={modeFilter}
+                  onChange={e => setModeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-primary-400"
+                >
+                  <option value="All">All Modes</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Online">Online</option>
+                </select>
+              </div>
+
               {/* Active filters summary */}
               {hasActiveFilters && (
                 <div className="border-t pt-4 space-y-1.5">
@@ -166,6 +216,11 @@ export default function ExploreEventsPage() {
                   {dateFilter && (
                     <span className="flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
                       <Calendar size={10} /> {format(new Date(dateFilter), 'MMM d, yyyy')}
+                    </span>
+                  )}
+                  {modeFilter !== 'All' && (
+                    <span className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                      <Monitor size={10} /> {modeFilter}
                     </span>
                   )}
                 </div>
@@ -192,35 +247,72 @@ export default function ExploreEventsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-4">
               <p className="text-gray-500 text-sm">
                 Showing <span className="font-semibold text-gray-800">{filtered.length}</span> event{filtered.length !== 1 ? 's' : ''}
                 {category !== 'All' && <span> in <strong>{category}</strong></span>}
               </p>
-              {hasActiveFilters && (
-                <button onClick={clearFilters} className="md:hidden text-xs text-red-500 hover:underline flex items-center gap-1">
-                  <X size={12} /> Clear filters
-                </button>
-              )}
+              
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Sort By Dropdown */}
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown size={16} className="text-gray-400" />
+                  <select
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value)}
+                    className="pl-2 pr-8 py-1.5 border rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-primary-400"
+                  >
+                    <option value="Newest">Newest First</option>
+                    <option value="Event Date">Event Date</option>
+                    <option value="Deadline Soon">Deadline Soon</option>
+                    <option value="Most Popular">Most Popular</option>
+                  </select>
+                </div>
+
+                {/* View Toggle */}
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setView('list')}
+                    className={`p-1.5 rounded-md transition ${view === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    title="List View"
+                  >
+                    <List size={16} />
+                  </button>
+                  <button
+                    onClick={() => setView('timeline')}
+                    className={`p-1.5 rounded-md transition ${view === 'timeline' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    title="Timeline View"
+                  >
+                    <Layout size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {filtered.length === 0 ? (
-              <div className="text-center py-24 text-gray-400">
-                <Search size={48} className="mx-auto mb-3 opacity-30" />
-                <p className="text-lg font-medium">No events found</p>
-                <p className="text-sm mt-1">Try adjusting your filters or search term</p>
-                <button onClick={clearFilters} className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
+              <div className="text-center py-20 bg-white border border-dashed rounded-xl">
+                <Search size={48} className="mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-bold text-gray-800 mb-2">No events found</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  We couldn't find any events matching your current filters. Try adjusting your search or clearing filters.
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-6 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg font-medium hover:bg-primary-100 transition"
+                >
                   Clear all filters
                 </button>
               </div>
+            ) : view === 'timeline' ? (
+              <Timeline events={filtered} userRole="student" />
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map(event => (
                   <EventCard
-                    key={event.id}
+                    key={event.id || event._id}
                     event={event}
-                    onRegister={() => {}}          // registration handled from inside EventCard
-                    isRegistered={registeredEvents.includes(event.id)}
+                    onRegister={() => {}}
+                    isRegistered={registeredEvents.some(re => String(re.id || re._id) === String(event.id || event._id))}
                   />
                 ))}
               </div>

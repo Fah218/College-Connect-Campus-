@@ -8,63 +8,52 @@ import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
 import StatCard from '../components/StatCard'
 import RecommendedSection from '../components/RecommendedSection'
-import Timeline from '../components/Timeline'
 import { Calendar, Trophy, Users, Filter, Layout, List, Bell, BellOff } from 'lucide-react'
-import { format, differenceInDays, differenceInHours } from 'date-fns'
+import { useCalendarStore } from '../store/calendarStore'
+import { format } from 'date-fns'
 
 export default function StudentDashboard() {
   const { events, registeredEvents, registerForEvent } = useEventStore()
   const { hackathons, teamRequests, joinRequests, fetchHackathonData } = useHackathonStore()
   const { getRecommendedEvents } = useRecommendationStore()
-  const { addNotification, user, toggleSavedEvent } = useAuthStore()
-  
+  const { addNotification, user } = useAuthStore()
+  const { reminders, removeReminder } = useCalendarStore()
   const [filter, setFilter] = useState({ category: 'all', search: '' })
   const [view, setView] = useState('list')
-  const [notifiedEvents, setNotifiedEvents] = useState([])
   
   useEffect(() => {
     fetchHackathonData?.()
   }, [])
-
-  // Calculate Saved Events Data
-  const savedEventsData = (user?.savedEvents || []).map(savedId => {
-    return events.find(e => String(e.id || e._id) === String(savedId))
-  }).filter(Boolean);
-
-  // Trigger Notifications for 24h Deadlines
-  useEffect(() => {
-    savedEventsData.forEach(event => {
-      const deadlineStr = event.registrationDeadlineDate || event.date;
-      if (!deadlineStr) return;
-      
-      const deadlineDate = new Date(deadlineStr);
-      const hoursLeft = differenceInHours(deadlineDate, new Date());
-      
-      if (hoursLeft > 0 && hoursLeft <= 24 && !notifiedEvents.includes(event.id || event._id)) {
-        addNotification({
-          title: 'Upcoming Deadline',
-          message: `Registration for "${event.title}" closes in ${hoursLeft} hours!`,
-          priority: 'high'
-        });
-        setNotifiedEvents(prev => [...prev, event.id || event._id]);
-      }
-    });
-  }, [savedEventsData.length, notifiedEvents, addNotification]);
   
   const approvedEvents = events.filter(e => e.status === 'approved')
   const recommendations = getRecommendedEvents(approvedEvents, registeredEvents)
 
-  const joinedHackathonsCount = (teamRequests || []).filter(tr => tr.members?.some(m => String(m.id) === String(user?.id))).length;
+  const teamHackathonIds = (teamRequests || [])
+    .filter(tr => 
+      String(tr.owner?.id) === String(user?.id) || String(tr.owner?._id) === String(user?._id) ||
+      tr.members?.some(m => String(m.id) === String(user?.id) || String(m._id) === String(user?._id))
+    )
+    .map(tr => String(tr.hackathonId));
+
+  const individualHackathonIds = (registeredEvents || [])
+    .filter(e => e.category === 'Hackathon')
+    .map(e => String(e.id || e._id));
+
+  const joinedHackathonsCount = new Set([...teamHackathonIds, ...individualHackathonIds]).size;
   
   const teamInvitationsCount = (joinRequests || []).filter(jr => 
     jr.status === 'pending' && 
     (teamRequests || []).some(tr => 
       (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) && 
-      String(tr.owner?.id) === String(user?.id)
+      (String(tr.owner?.id) === String(user?.id) || String(tr.owner?._id) === String(user?._id))
     )
   ).length;
 
-  const upcomingEventsCount = approvedEvents.filter(e => new Date(e.date) >= new Date(new Date().setHours(0,0,0,0))).length;
+  const upcomingEventsCount = approvedEvents.filter(e => {
+    const eventDate = new Date(e.date || e.startDate);
+    const today = new Date(new Date().setHours(0,0,0,0));
+    return eventDate >= today;
+  }).length;
   
   const filteredEvents = approvedEvents.filter(event => {
     const matchesCategory = filter.category === 'all' || event.category === filter.category
@@ -126,87 +115,39 @@ export default function StudentDashboard() {
           />
         </div>
         
-        {/* ── My Saved Events Panel ── */}
-        <div className="mb-8">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 shadow-sm">
-            <h3 className="flex items-center gap-2 text-yellow-800 font-bold text-base mb-4">
-              <Bell size={18} className="text-yellow-500" />
-              My Saved Events
-              <span className="ml-auto px-2 py-0.5 bg-yellow-200 text-yellow-800 text-xs rounded-full font-semibold">
-                {savedEventsData.length}
-              </span>
-            </h3>
-            
-            {savedEventsData.length === 0 ? (
-              <div className="text-center py-6 bg-white border border-yellow-100 rounded-lg">
-                <p className="text-sm text-gray-500">You haven't saved any events yet.</p>
-                <Link to="/events" className="text-sm font-medium text-primary-600 hover:text-primary-700 mt-2 inline-block">
-                  Explore Events
-                </Link>
-              </div>
-            ) : (
+        {/* ── My Reminders Panel ── */}
+        {reminders.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 shadow-sm">
+              <h3 className="flex items-center gap-2 text-yellow-800 font-bold text-base mb-4">
+                <Bell size={18} className="text-yellow-500" />
+                My Reminders
+                <span className="ml-auto px-2 py-0.5 bg-yellow-200 text-yellow-800 text-xs rounded-full font-semibold">
+                  {reminders.length}
+                </span>
+              </h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savedEventsData.map(ev => {
-                  const deadlineStr = ev.registrationDeadlineDate || ev.date;
-                  const deadlineDate = deadlineStr ? new Date(deadlineStr) : null;
-                  const daysLeft = deadlineDate ? differenceInDays(deadlineDate, new Date()) : null;
-                  const hoursLeft = deadlineDate ? differenceInHours(deadlineDate, new Date()) : null;
-                  
-                  let countdownText = '';
-                  if (hoursLeft !== null) {
-                    if (hoursLeft < 0) countdownText = 'Closed';
-                    else if (hoursLeft < 24) countdownText = `${hoursLeft} hours left`;
-                    else countdownText = `${daysLeft} days left`;
-                  }
-
-                  const isRegistered = registeredEvents.some(re => String(re.id || re._id) === String(ev.id || ev._id));
-
-                  return (
-                    <div key={ev.id || ev._id} className="flex flex-col justify-between bg-white border border-yellow-100 rounded-lg p-4 shadow-sm">
-                      <div className="mb-3">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="font-semibold text-sm text-gray-800 line-clamp-2 pr-2">{ev.title}</p>
-                          <span className="shrink-0 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded">
-                            {ev.category || ev.type || 'Event'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-2">
-                          📅 {deadlineDate ? format(deadlineDate, 'MMM d, yyyy') : 'No Deadline'}
-                        </p>
-                        {deadlineDate && (
-                          <div className={`inline-block px-2 py-1 rounded text-xs font-bold ${hoursLeft < 24 && hoursLeft >= 0 ? 'bg-red-100 text-red-700' : 'bg-orange-50 text-orange-600'}`}>
-                            ⏳ {countdownText}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 mt-auto">
-                        {isRegistered ? (
-                          <div className="flex-1 text-center py-1.5 text-xs font-bold bg-green-50 text-green-700 border border-green-200 rounded">
-                            Registered ✓
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => registerForEvent(ev.id || ev._id)}
-                            className="flex-1 py-1.5 text-xs font-bold bg-primary-600 text-white rounded hover:bg-primary-700 transition"
-                          >
-                            Register
-                          </button>
-                        )}
-                        <button
-                          onClick={() => toggleSavedEvent(ev.id || ev._id)}
-                          className="px-2.5 py-1.5 rounded bg-gray-50 border border-gray-200 text-gray-500 hover:text-red-500 hover:bg-red-50 transition"
-                          title="Remove from saved"
-                        >
-                          <BellOff size={14} />
-                        </button>
-                      </div>
+                {reminders.map(r => (
+                  <div key={r.eventId} className="flex items-center justify-between bg-white border border-yellow-100 rounded-lg px-4 py-3 shadow-sm">
+                    <div>
+                      <p className="font-semibold text-sm text-gray-800 truncate max-w-[200px]">{r.eventTitle}</p>
+                      <p className="text-xs text-red-500 mt-1">
+                        ⏳ Deadline: {r.deadline ? format(new Date(r.deadline), 'MMM d, yyyy') : 'TBA'}
+                      </p>
                     </div>
-                  );
-                })}
+                    <button
+                      onClick={() => removeReminder(r.eventId)}
+                      className="ml-3 p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                      title="Remove reminder"
+                    >
+                      <BellOff size={16} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Recommended Section */}
         <RecommendedSection
