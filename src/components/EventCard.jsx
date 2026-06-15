@@ -100,10 +100,10 @@ export default function EventCard({ event, onRegister, isRegistered }) {
       {/* Register button */}
       {onRegister && (
         <Link
-          to={`/events/${event.id || event._id}/register`}
+          to={event.category === 'Hackathon' ? '/hackathons' : `/events/${event.id || event._id}/register`}
           className="block w-full py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 text-center"
         >
-          Register Now
+          {event.category === 'Hackathon' ? 'Form Team / Join' : 'Register Now'}
         </Link>
       )}
     </div>

@@ -5,58 +5,7 @@ import axios from 'axios'
 export const useEventStore = create(
   persist(
     (set, get) => ({
-      events: [
-        {
-          id: 1,
-          title: 'Tech Talk: AI in Education',
-          club: 'Tech Club',
-          category: 'Workshop',
-          date: '2025-01-15',
-          time: '14:00',
-          location: 'Auditorium A',
-          description: 'Learn about AI applications in modern education',
-          tags: ['AI', 'Technology', 'Education'],
-          status: 'approved',
-          attendees: 45,
-          capacity: 100,
-          domains: ['AI', 'Education'],
-          collaboratingClubs: []
-        },
-        {
-          id: 2,
-          title: 'Annual Hackathon 2025',
-          club: 'Coding Club',
-          category: 'Hackathon',
-          date: '2025-01-20',
-          time: '09:00',
-          location: 'Computer Lab',
-          description: '24-hour coding marathon',
-          tags: ['Hackathon', 'Coding', 'Competition'],
-          status: 'approved',
-          attendees: 80,
-          capacity: 120,
-          domains: ['Web Development', 'Programming'],
-          collaboratingClubs: ['Tech Club']
-        },
-        {
-          id: 3,
-          title: 'Web Development Bootcamp',
-          club: 'Tech Club',
-          category: 'Workshop',
-          date: '2025-01-25',
-          time: '10:00',
-          location: 'Lab 3',
-          description: 'Intensive web development training',
-          tags: ['Web', 'Frontend', 'Backend'],
-          status: 'approved',
-          attendees: 60,
-          capacity: 80,
-          domains: ['Web Development'],
-          collaboratingClubs: []
-        }
-      ],
-      
-      registeredEvents: [],
+      events: [],
       auditLogs: [],
       
       fetchEvents: async () => {
@@ -71,12 +20,7 @@ export const useEventStore = create(
             date: dbEvent.date || dbEvent.startDate,
             time: dbEvent.time || dbEvent.startTime
           }));
-          
-          set((state) => {
-            // Keep hardcoded events (id is number) and merge DB events (id is string/ObjectId)
-            const hardcodedEvents = state.events.filter(e => typeof e.id === 'number');
-            return { events: [...hardcodedEvents, ...dbEvents] };
-          });
+          set({ events: dbEvents });
         } catch (error) {
           console.error("Error fetching events from DB:", error);
         }
@@ -149,27 +93,7 @@ export const useEventStore = create(
         }]
       })),
       
-      registerForEvent: (eventId, userId) => {
-        const state = get()
-        const event = state.events.find(e => e.id === eventId)
-        
-        // Check for duplicate registration
-        if (state.registeredEvents.includes(eventId)) {
-          throw new Error('You are already registered for this event')
-        }
-        
-        // Check capacity
-        if (event && event.attendees >= event.capacity) {
-          throw new Error('Event is at full capacity')
-        }
-        
-        set((state) => ({
-          registeredEvents: [...state.registeredEvents, eventId],
-          events: state.events.map(e => 
-            e.id === eventId ? { ...e, attendees: e.attendees + 1 } : e
-          )
-        }))
-      },
+      // Legacy registerForEvent removed; useRegistrationStore handles this now.
       
       approveEvent: async (id, approver) => {
         try {

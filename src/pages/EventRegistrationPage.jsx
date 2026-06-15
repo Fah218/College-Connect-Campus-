@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
+import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import { Calendar, MapPin, Users, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
@@ -11,7 +12,9 @@ export default function EventRegistrationPage() {
   const navigate = useNavigate()
   const { events } = useEventStore()
   const { user, isAuthenticated, addNotification } = useAuthStore()
+  const { registerIndividual } = useRegistrationStore()
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -22,7 +25,7 @@ export default function EventRegistrationPage() {
     expectations: ''
   })
   
-  const event = events.find(e => e.id === parseInt(id))
+  const event = events.find(e => String(e.id) === String(id) || String(e._id) === String(id))
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -30,13 +33,13 @@ export default function EventRegistrationPage() {
     }
   }, [isAuthenticated, navigate])
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setErrorMsg('')
     
-    // Mock registration - no backend needed
-    setTimeout(() => {
-      registerForEvent(eventId)
+    try {
+      await registerIndividual(event._id || event.id, formData, user?.id || user?._id)
       setSuccess(true)
       addNotification({
         title: 'Registration Successful!',
@@ -47,8 +50,11 @@ export default function EventRegistrationPage() {
       setTimeout(() => {
         navigate('/student')
       }, 2000)
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Registration failed')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
   
   if (!event) {
@@ -121,7 +127,13 @@ export default function EventRegistrationPage() {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-xl font-bold mb-4">Registration Form</h2>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMsg && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-1">Full Name *</label>
                 <input

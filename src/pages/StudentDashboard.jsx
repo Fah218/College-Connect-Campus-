@@ -4,6 +4,7 @@ import { useEventStore } from '../store/eventStore'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useRecommendationStore } from '../store/recommendationStore'
 import { useAuthStore } from '../store/authStore'
+import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
 import StatCard from '../components/StatCard'
@@ -13,17 +14,23 @@ import { useCalendarStore } from '../store/calendarStore'
 import { format } from 'date-fns'
 
 export default function StudentDashboard() {
-  const { events, registeredEvents, registerForEvent } = useEventStore()
+  const { events } = useEventStore()
   const { hackathons, teamRequests, joinRequests, fetchHackathonData } = useHackathonStore()
   const { getRecommendedEvents } = useRecommendationStore()
   const { addNotification, user } = useAuthStore()
   const { reminders, removeReminder } = useCalendarStore()
+  const { registrations, fetchStudentRegistrations } = useRegistrationStore()
   const [filter, setFilter] = useState({ category: 'all', search: '' })
   const [view, setView] = useState('list')
   
   useEffect(() => {
     fetchHackathonData?.()
-  }, [])
+    if (user?.id || user?._id) {
+      fetchStudentRegistrations?.(user.id || user._id)
+    }
+  }, [user])
+  
+  const registeredEvents = registrations.map(r => r.eventId?.title ? r.eventId : events.find(e => String(e.id || e._id) === String(r.eventId))).filter(Boolean);
   
   const approvedEvents = events.filter(e => e.status === 'approved')
   const recommendations = getRecommendedEvents(approvedEvents, registeredEvents)

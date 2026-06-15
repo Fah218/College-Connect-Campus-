@@ -3,12 +3,14 @@ import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
+import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import StatCard from '../components/StatCard'
 import Timeline from '../components/Timeline'
 import PredictiveInsights from '../components/PredictiveInsights'
 import ExportButton from '../components/ExportButton'
-import { Calendar, Users, CheckCircle, Clock, Plus, Edit, Trash2, Layout, List, ChevronLeft, ChevronRight, X, MapPin, Tag } from 'lucide-react'
+import ParticipantsModal from '../components/ParticipantsModal'
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, X, Upload, XCircle, Settings, Mail, Bell, Shield, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, Search, CheckCircle, Layout, List } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from 'date-fns'
 
 export default function ClubHeadDashboard() {
@@ -21,6 +23,7 @@ export default function ClubHeadDashboard() {
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(null)
   const [viewingEvent, setViewingEvent] = useState(null)
+  const [viewingParticipants, setViewingParticipants] = useState(null)
   
   const { user } = useAuthStore()
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
@@ -198,11 +201,19 @@ export default function ClubHeadDashboard() {
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button
+                          onClick={() => setViewingParticipants(event)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded"
+                          title="View Participants"
+                        >
+                          <Users size={16} />
+                        </button>
+                        <button
                           onClick={() => {
                             setEditingEvent(event)
                             setShowModal(true)
                           }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Edit Event"
                         >
                           <Edit size={16} />
                         </button>
@@ -224,6 +235,10 @@ export default function ClubHeadDashboard() {
 
       {viewingEvent && (
         <EventDetailsModal event={viewingEvent} onClose={() => setViewingEvent(null)} onEdit={(evt) => { setViewingEvent(null); setEditingEvent(evt); setShowModal(true) }} />
+      )}
+
+      {viewingParticipants && (
+        <ParticipantsModal event={viewingParticipants} onClose={() => setViewingParticipants(null)} />
       )}
       </div>
       

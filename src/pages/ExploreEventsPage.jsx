@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useEventStore } from '../store/eventStore'
+import { useRegistrationStore } from '../store/registrationStore'
+import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
 import Timeline from '../components/Timeline'
@@ -10,7 +12,9 @@ import { format } from 'date-fns'
 const CATEGORIES = ['All', 'Workshop', 'Seminar', 'Hackathon', 'Competition']
 
 export default function ExploreEventsPage() {
-  const { events, registeredEvents, registerForEvent } = useEventStore()
+  const { events } = useEventStore()
+  const { registrations } = useRegistrationStore()
+  const { user } = useAuthStore()
   const [search, setSearch]           = useState('')
   const [category, setCategory]       = useState('All')
   const [clubFilter, setClubFilter]   = useState('All')
@@ -312,7 +316,7 @@ export default function ExploreEventsPage() {
                     key={event.id || event._id}
                     event={event}
                     onRegister={() => {}}
-                    isRegistered={registeredEvents.some(re => String(re.id || re._id) === String(event.id || event._id))}
+                    isRegistered={registrations.some(r => String(r.eventId?._id || r.eventId) === String(event.id || event._id))}
                   />
                 ))}
               </div>

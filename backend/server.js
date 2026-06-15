@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import clubRoutes from './routes/clubRoutes.js';
+import registrationRoutes from './routes/registrationRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -19,11 +20,13 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/clubs', clubRoutes);
+app.use('/api/registrations', registrationRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {

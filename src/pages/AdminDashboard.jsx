@@ -3,6 +3,7 @@ import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
+import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import StatCard from '../components/StatCard'
 import InsightCard from '../components/InsightCard'
@@ -21,6 +22,7 @@ export default function AdminDashboard() {
   const [managingClub, setManagingClub] = useState(null)
   const [clubHeads, setClubHeads] = useState([])
   const { clubs: realClubs, fetchClubs, toggleArchiveStatus } = useClubStore()
+  const { adminStats, fetchAdminStats } = useRegistrationStore()
   
   useEffect(() => {
     const fetchClubHeads = async () => {
@@ -36,6 +38,7 @@ export default function AdminDashboard() {
     }
     fetchClubHeads()
     fetchClubs()
+    fetchAdminStats?.()
   }, [])
   
   const insights = generateInsights(events)
@@ -91,8 +94,9 @@ export default function AdminDashboard() {
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <StatCard icon={Calendar} title="Total Events" value={events.length} color="primary" />
           <StatCard icon={CheckCircle} title="Approved" value={approvedEvents.length} color="green" />
-          <StatCard icon={Clock} title="Pending Approval" value={pendingEvents.length} color="orange" />
-          <StatCard icon={Users} title="Total Participants" value={events.reduce((sum, e) => sum + (e.attendees || 0), 0)} color="purple" />
+          <StatCard icon={Users} title="Total Registrations" value={adminStats.totalRegistrations} color="blue" />
+          <StatCard icon={Users} title="Total Participants" value={adminStats.totalParticipants} color="purple" />
+          <StatCard icon={Users} title="Registered Teams" value={adminStats.teamRegs} color="orange" />
         </div>
         
         {/* Insights */}
