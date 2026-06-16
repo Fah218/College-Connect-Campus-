@@ -48,9 +48,8 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
-      // Increment attendees count
-      event.attendees = (event.attendees || 0) + 1;
-      await event.save();
+      // Increment attendees count without triggering full document validation
+      await Event.findByIdAndUpdate(eventId, { $inc: { attendees: 1 } });
 
       return res.status(201).json({ message: 'Successfully registered!', registration: newRegistration });
     } 
@@ -80,10 +79,9 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
-      // Increment attendees by team size
+      // Increment attendees by team size without triggering full document validation
       const teamSize = (team.members ? team.members.length : 0) + 1; // members + owner
-      event.attendees = (event.attendees || 0) + teamSize;
-      await event.save();
+      await Event.findByIdAndUpdate(eventId, { $inc: { attendees: teamSize } });
 
       return res.status(201).json({ message: 'Team successfully registered!', registration: newRegistration });
     }

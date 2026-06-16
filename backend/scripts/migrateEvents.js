@@ -14,8 +14,17 @@ const migrateEvents = async () => {
 
     const events = await Event.find({});
     let updatedCount = 0;
+    let deletedCount = 0;
 
     for (const event of events) {
+      // 1. Remove events with mock/timestamp IDs. 
+      // Mongoose normally handles _id as ObjectId, but if a string was forced or they are invalid:
+      if (!mongoose.Types.ObjectId.isValid(event._id)) {
+        await Event.deleteOne({ _id: event._id });
+        deletedCount++;
+        continue;
+      }
+
       let needsUpdate = false;
 
       if (!event.contactName) {
@@ -57,7 +66,7 @@ const migrateEvents = async () => {
       }
     }
 
-    console.log(`Migration completed. Updated ${updatedCount} events.`);
+    console.log(`Migration completed. Updated ${updatedCount} events. Deleted ${deletedCount} invalid mock events.`);
     process.exit(0);
   } catch (error) {
     console.error('Migration failed:', error);

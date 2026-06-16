@@ -69,17 +69,31 @@ export const useEventStore = create(
         }
       },
       
-      updateEvent: (id, updates) => set((state) => ({
-        events: state.events.map(e => e.id === id ? { ...e, ...updates } : e),
-        auditLogs: [...state.auditLogs, {
-          id: Date.now(),
-          action: 'updated',
-          eventId: id,
-          eventTitle: state.events.find(e => e.id === id)?.title,
-          timestamp: new Date().toISOString(),
-          user: 'Club Head'
-        }]
-      })),
+      updateEvent: async (id, updates) => {
+        try {
+          // If the event has a MongoDB ObjectId (string), save to backend
+          if (typeof id === 'string') {
+            await axios.put(`http://localhost:5001/api/events/${id}`, { 
+              ...updates,
+              status: 'pending' // Re-evaluate upon edit
+            });
+          }
+          
+          set((state) => ({
+            events: state.events.map(e => e.id === id ? { ...e, ...updates, status: 'pending' } : e),
+            auditLogs: [...state.auditLogs, {
+              id: Date.now(),
+              action: 'updated',
+              eventId: id,
+              eventTitle: state.events.find(e => e.id === id)?.title,
+              timestamp: new Date().toISOString(),
+              user: 'Club Head'
+            }]
+          }));
+        } catch (error) {
+          console.error("Error updating event:", error);
+        }
+      },
       
       deleteEvent: (id) => set((state) => ({
         events: state.events.filter(e => e.id !== id),

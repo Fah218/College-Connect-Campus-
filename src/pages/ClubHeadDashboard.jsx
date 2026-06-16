@@ -46,7 +46,7 @@ export default function ClubHeadDashboard() {
   
   const handleSubmit = async (formData) => {
     if (editingEvent) {
-      updateEvent(editingEvent.id, formData)
+      await updateEvent(editingEvent.id || editingEvent._id, formData)
       addNotification({
         title: 'Event Updated',
         message: `${formData.title} has been updated`,
@@ -650,15 +650,15 @@ function EventModal({ event, onClose, onSubmit }) {
               <h3 className="text-lg font-semibold border-b pb-2 mb-4">Common Details</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Event Title *</label>
+                  <label className="block text-sm font-medium mb-1">Event Title <span className="text-red-600">*</span></label>
                   <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Short Description (1-2 lines) *</label>
+                  <label className="block text-sm font-medium mb-1">Short Description (1-2 lines) <span className="text-red-600">*</span></label>
                   <input type="text" value={formData.shortDescription} onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Detailed Description *</label>
+                  <label className="block text-sm font-medium mb-1">Detailed Description <span className="text-red-600">*</span></label>
                   <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg" rows="4" required />
                 </div>
               </div>
@@ -708,11 +708,11 @@ function EventModal({ event, onClose, onSubmit }) {
             </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-red-600">Registration Deadline Date *</label>
+                <label className="block text-sm font-medium mb-1">Registration Deadline Date <span className="text-red-600">*</span></label>
                 <input type="date" value={formData.registrationDeadlineDate} onChange={(e) => setFormData({ ...formData, registrationDeadlineDate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-red-600">Registration Deadline Time *</label>
+                <label className="block text-sm font-medium mb-1">Registration Deadline Time <span className="text-red-600">*</span></label>
                 <input type="time" value={formData.registrationDeadlineTime} onChange={(e) => setFormData({ ...formData, registrationDeadlineTime: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
               </div>
             </div>
@@ -766,12 +766,15 @@ function EventModal({ event, onClose, onSubmit }) {
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-purple-700">Hackathon Details</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Prizes <span className="text-red-600">*</span></label>
-                    <input type="text" value={formData.prizePool} onChange={(e) => setFormData({ ...formData, prizePool: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="$10,000 or Swags" required />
+                    <label className="block text-sm font-medium mb-1">Participation Type <span className="text-red-600">*</span></label>
+                    <select value={formData.participationType} onChange={(e) => setFormData({ ...formData, participationType: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required>
+                      <option value="Individual">Individual</option>
+                      <option value="Team">Team</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Winner Rewards (optional)</label>
-                    <input type="text" value={formData.winnerRewards} onChange={(e) => setFormData({ ...formData, winnerRewards: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="Internships, Credits" />
+                    <label className="block text-sm font-medium mb-1">Prizes <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.prizePool} onChange={(e) => setFormData({ ...formData, prizePool: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="$10,000 or Swags" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -790,13 +793,19 @@ function EventModal({ event, onClose, onSubmit }) {
                     <input type="text" value={formData.domains} onChange={(e) => setFormData({ ...formData, domains: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. Web, App, AI" required />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium mb-1">Winner Rewards (optional)</label>
+                    <input type="text" value={formData.winnerRewards} onChange={(e) => setFormData({ ...formData, winnerRewards: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="Internships, Credits" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
                     <label className="block text-sm font-medium mb-1">Problem Statement PDF (optional)</label>
                     <input type="file" accept=".pdf" onChange={(e) => handleImageUpload(e, 'problemStatementPdf')} className="w-full px-4 py-2 border rounded-lg" />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <input type="checkbox" id="teamAllowed" checked={formData.teamFormationAllowed} onChange={(e) => setFormData({ ...formData, teamFormationAllowed: e.target.checked })} className="w-4 h-4 text-primary-600" />
-                  <label htmlFor="teamAllowed" className="text-sm font-medium text-gray-700">Allow in-app Team Formation</label>
+                  <label htmlFor="teamAllowed" className="text-sm font-medium text-gray-700">Allow in-app Team Formation (optional)</label>
                 </div>
               </section>
             )}
@@ -806,9 +815,18 @@ function EventModal({ event, onClose, onSubmit }) {
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-green-700">Competition Details</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
+                    <label className="block text-sm font-medium mb-1">Participation Type <span className="text-red-600">*</span></label>
+                    <select value={formData.participationType} onChange={(e) => setFormData({ ...formData, participationType: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required>
+                      <option value="Individual">Individual</option>
+                      <option value="Team">Team</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium mb-1">Competition Type <span className="text-red-600">*</span></label>
                     <input type="text" value={formData.competitionType} onChange={(e) => setFormData({ ...formData, competitionType: e.target.value })} className="w-full px-4 py-2 border rounded-lg" placeholder="e.g. Ideathon, Coding, Design" required />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Rules (link or text) <span className="text-red-600">*</span></label>
                     <input type="text" value={formData.rules} onChange={(e) => setFormData({ ...formData, rules: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
@@ -822,21 +840,21 @@ function EventModal({ event, onClose, onSubmit }) {
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-blue-700">Workshop Details</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Speaker Name</label>
-                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                    <label className="block text-sm font-medium mb-1">Speaker Name <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Speaker Designation</label>
-                    <input type="text" value={formData.speakerDesignation} onChange={(e) => setFormData({ ...formData, speakerDesignation: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                    <label className="block text-sm font-medium mb-1">Speaker Designation <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.speakerDesignation} onChange={(e) => setFormData({ ...formData, speakerDesignation: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Organization</label>
-                    <input type="text" value={formData.organization} onChange={(e) => setFormData({ ...formData, organization: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                    <label className="block text-sm font-medium mb-1">Organization <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.organization} onChange={(e) => setFormData({ ...formData, organization: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Certificate Provided</label>
+                    <label className="block text-sm font-medium mb-1">Certificate Provided (optional)</label>
                     <select value={formData.certificateProvided ? "Yes" : "No"} onChange={(e) => setFormData({ ...formData, certificateProvided: e.target.value === "Yes" })} className="w-full px-4 py-2 border rounded-lg">
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
@@ -851,17 +869,21 @@ function EventModal({ event, onClose, onSubmit }) {
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-orange-700">Seminar Details</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Speaker Name</label>
-                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                    <label className="block text-sm font-medium mb-1">Speaker Name <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.speakerName} onChange={(e) => setFormData({ ...formData, speakerName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Seminar Topic</label>
-                    <input type="text" value={formData.seminarTopic} onChange={(e) => setFormData({ ...formData, seminarTopic: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                    <label className="block text-sm font-medium mb-1">Seminar Topic <span className="text-red-600">*</span></label>
+                    <input type="text" value={formData.seminarTopic} onChange={(e) => setFormData({ ...formData, seminarTopic: e.target.value })} className="w-full px-4 py-2 border rounded-lg" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Certificate Provided</label>
+                    <label className="block text-sm font-medium mb-1">Organization (optional)</label>
+                    <input type="text" value={formData.organization} onChange={(e) => setFormData({ ...formData, organization: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Certificate Provided (optional)</label>
                     <select value={formData.certificateProvided ? "Yes" : "No"} onChange={(e) => setFormData({ ...formData, certificateProvided: e.target.value === "Yes" })} className="w-full px-4 py-2 border rounded-lg">
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
