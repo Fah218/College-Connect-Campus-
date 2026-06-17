@@ -197,7 +197,19 @@ export default function ClubHeadDashboard() {
                         {event.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">{event.attendees || 0}/{event.maxParticipants || event.capacity || 'Unlimited'}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {event.category === 'Hackathon' || event.participationType === 'Team' ? (
+                        <div>
+                          <div className="font-medium text-gray-800">{event.teamCount || 0} Teams</div>
+                          <div className="text-gray-500 text-xs">{event.totalParticipants || 0} Participants</div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-gray-800">{event.individualCount || event.totalParticipants || 0} / {event.maxParticipants || event.capacity || 'Unlimited'}</div>
+                          <div className="text-gray-500 text-xs">Registered</div>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button

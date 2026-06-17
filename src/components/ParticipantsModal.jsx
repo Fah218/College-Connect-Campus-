@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { X, Users, Mail, Building, Calendar, Medal } from 'lucide-react'
+import { X, Users, Mail, Building, Calendar, Medal, Download, Phone } from 'lucide-react'
 import { useRegistrationStore } from '../store/registrationStore'
 import { format } from 'date-fns'
 
@@ -17,13 +17,54 @@ export default function ParticipantsModal({ event, onClose }) {
 
   const isTeamEvent = event?.category === 'Hackathon' || teamRegs.length > 0 || event?.participationType === 'Team'
 
+  const downloadCSV = (type) => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    if (type === 'Individual') {
+      csvContent += "Name,Email,Department,Year,Phone,Registration Date\n";
+      individualRegs.forEach(reg => {
+        const name = (reg.studentId?.name || reg.formData?.name || 'Unknown').replace(/,/g, ' ');
+        const email = (reg.studentId?.email || reg.formData?.email || 'N/A').replace(/,/g, ' ');
+        const department = (reg.studentId?.department || reg.formData?.department || 'N/A').replace(/,/g, ' ');
+        const year = (reg.studentId?.year || reg.formData?.year || 'N/A').replace(/,/g, ' ');
+        const phone = (reg.studentId?.phone || reg.formData?.phone || 'N/A').replace(/,/g, ' ');
+        const date = format(new Date(reg.createdAt), 'MMM dd yyyy');
+        csvContent += `${name},${email},${department},${year},${phone},${date}\n`;
+      });
+    } else {
+      csvContent += "Team Name,Team Lead,Lead Email,Member Names,Member Emails,Team Size,Registration Date\n";
+      teamRegs.forEach(reg => {
+        const teamName = (reg.teamId?.name || 'Unknown Team').replace(/,/g, ' ');
+        const lead = (reg.teamId?.owner?.name || 'N/A').replace(/,/g, ' ');
+        const leadEmail = (reg.teamId?.owner?.email || 'N/A').replace(/,/g, ' ');
+        const members = (reg.teamId?.members || []).map(m => m.name).join(' | ').replace(/,/g, ' ');
+        const memberEmails = (reg.teamId?.members || []).map(m => m.email).join(' | ').replace(/,/g, ' ');
+        const size = (reg.teamId?.members ? reg.teamId.members.length + 1 : 1);
+        const date = format(new Date(reg.createdAt), 'MMM dd yyyy');
+        csvContent += `${teamName},${lead},${leadEmail},${members},${memberEmails},${size},${date}\n`;
+      });
+    }
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${event.title.replace(/ /g, '_')}_${type}_Registrations.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Participants List</h2>
-            <p className="text-sm text-gray-500 mt-1">{event.title} • {event.attendees || 0} Total Attendees</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {event.title} • {
+                isTeamEvent 
+                  ? `${event.teamCount || teamRegs.length} Teams • ${event.totalParticipants || 0} Total Participants`
+                  : `${event.individualCount || individualRegs.length} Registered Students`
+              }
+            </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X size={24} className="text-gray-500" />
@@ -35,99 +76,119 @@ export default function ParticipantsModal({ event, onClose }) {
             <div className="flex justify-center items-center h-40">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
-          ) : isTeamEvent ? (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                <Users size={18} /> Team Registrations ({teamRegs.length})
-              </h3>
-              {teamRegs.length === 0 ? (
-                <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-100">No teams registered yet.</p>
-              ) : (
-                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
-                      <tr>
-                        <th className="px-6 py-4 font-medium">Team Name</th>
-                        <th className="px-6 py-4 font-medium">Team Lead</th>
-                        <th className="px-6 py-4 font-medium">Members</th>
-                        <th className="px-6 py-4 font-medium">Member Emails</th>
-                        <th className="px-6 py-4 font-medium">Reg Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {teamRegs.map(reg => (
-                        <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-800">{reg.teamId?.name || 'Unknown Team'}</td>
-                          <td className="px-6 py-4">
-                            <div className="font-medium">{reg.teamId?.owner?.name || 'N/A'}</div>
-                            <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Mail size={10}/>{reg.teamId?.owner?.email}</div>
-                          </td>
-                          <td className="px-6 py-4 text-gray-600">
-                            <ul className="list-disc pl-4 text-xs space-y-1">
-                              {reg.teamId?.members?.map((m, i) => (
-                                <li key={i}>{m.name || 'Unknown'}</li>
-                              ))}
-                              {!reg.teamId?.members?.length && <span className="text-gray-400 italic">No additional members</span>}
-                            </ul>
-                          </td>
-                          <td className="px-6 py-4 text-gray-600 text-xs">
-                             <ul className="space-y-1">
-                              {reg.teamId?.members?.map((m, i) => (
-                                <li key={i}>{m.email || 'N/A'}</li>
-                              ))}
-                            </ul>
-                          </td>
-                          <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                            {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          ) : (
+            <div className="space-y-8">
+              {(isTeamEvent || teamRegs.length > 0) && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <Users size={18} /> Team Registrations ({teamRegs.length})
+                    </h3>
+                    <button onClick={() => downloadCSV('Team')} className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors">
+                      <Download size={16} /> Export Team CSV
+                    </button>
+                  </div>
+                  {teamRegs.length === 0 ? (
+                    <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-100">No teams registered yet.</p>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
+                          <tr>
+                            <th className="px-6 py-4 font-medium">Team Name</th>
+                            <th className="px-6 py-4 font-medium">Team Lead</th>
+                            <th className="px-6 py-4 font-medium">Lead Email</th>
+                            <th className="px-6 py-4 font-medium">Team Size</th>
+                            <th className="px-6 py-4 font-medium">Reg Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {teamRegs.map(reg => (
+                            <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 font-medium text-gray-800">{reg.teamId?.name || 'Unknown Team'}</td>
+                              <td className="px-6 py-4">
+                                <div className="font-medium">{reg.teamId?.owner?.name || 'N/A'}</div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Mail size={14} className="text-gray-400" />
+                                  {reg.teamId?.owner?.email || 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                {reg.teamId?.members ? reg.teamId.members.length + 1 : 1}
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
+                                {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                <Users size={18} /> Individual Registrations ({individualRegs.length})
-              </h3>
-              {individualRegs.length === 0 ? (
-                <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-100">No students registered yet.</p>
-              ) : (
-                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
-                      <tr>
-                        <th className="px-6 py-4 font-medium">Full Name</th>
-                        <th className="px-6 py-4 font-medium">Email</th>
-                        <th className="px-6 py-4 font-medium">Department</th>
-                        <th className="px-6 py-4 font-medium">Year</th>
-                        <th className="px-6 py-4 font-medium">Reg Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {individualRegs.map(reg => (
-                        <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-800">{reg.studentId?.name || reg.formData?.name || 'Unknown'}</td>
-                          <td className="px-6 py-4 flex items-center gap-2 text-gray-600">
-                            <Mail size={14} className="text-gray-400" />
-                            {reg.studentId?.email || reg.formData?.email || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-gray-600 flex items-center gap-2">
-                            <Building size={14} className="text-gray-400" />
-                            {reg.studentId?.department || reg.formData?.department || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-gray-600">
-                            {reg.studentId?.year || reg.formData?.year || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                            {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+              {(!isTeamEvent || individualRegs.length > 0) && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <Users size={18} /> Individual Registrations ({individualRegs.length})
+                    </h3>
+                    <button onClick={() => downloadCSV('Individual')} className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors">
+                      <Download size={16} /> Export Individual CSV
+                    </button>
+                  </div>
+                  {individualRegs.length === 0 ? (
+                    <p className="text-gray-500 bg-white p-4 rounded-xl border border-gray-100">No students registered yet.</p>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
+                          <tr>
+                            <th className="px-6 py-4 font-medium">Full Name</th>
+                            <th className="px-6 py-4 font-medium">Email</th>
+                            <th className="px-6 py-4 font-medium">Department</th>
+                            <th className="px-6 py-4 font-medium">Year</th>
+                            <th className="px-6 py-4 font-medium">Phone Number</th>
+                            <th className="px-6 py-4 font-medium">Reg Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {individualRegs.map(reg => (
+                            <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 font-medium text-gray-800">{reg.studentId?.name || reg.formData?.name || 'Unknown'}</td>
+                              <td className="px-6 py-4 text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Mail size={14} className="text-gray-400" />
+                                  {reg.studentId?.email || reg.formData?.email || 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Building size={14} className="text-gray-400" />
+                                  {reg.studentId?.department || reg.formData?.department || 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                {reg.studentId?.year || reg.formData?.year || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Phone size={14} className="text-gray-400" />
+                                  {reg.studentId?.phone || reg.formData?.phone || 'N/A'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
+                                {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

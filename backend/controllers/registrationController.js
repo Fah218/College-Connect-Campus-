@@ -149,7 +149,7 @@ export const getEventRegistrations = async (req, res) => {
     // Optional: Verify that the user is the club head for this event
     
     const registrations = await Registration.find({ eventId })
-      .populate('studentId', 'name email department year rollNumber')
+      .populate('studentId', 'name email department year rollNumber phone')
       .populate({
         path: 'teamId',
         populate: [

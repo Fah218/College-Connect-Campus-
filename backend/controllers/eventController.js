@@ -1,4 +1,5 @@
 import Event from '../models/Event.js';
+import Registration from '../models/Registration.js';
 
 export const createEvent = async (req, res) => {
   try {
@@ -24,10 +25,39 @@ export const createEvent = async (req, res) => {
 
 export const getEvents = async (req, res) => {
   try {
-    const events = await Event.find();
+    const events = await Event.find().lean();
+    
+    // Dynamically calculate individual/team/total counts using Registration
+    const eventsWithAttendees = await Promise.all(events.map(async (event) => {
+      const registrations = await Registration.find({ eventId: event._id }).populate('teamId');
+      
+      let individualCount = 0;
+      let teamCount = 0;
+      let totalParticipants = 0;
+
+      for (const reg of registrations) {
+        if (reg.participationType === 'Individual') {
+          individualCount += 1;
+          totalParticipants += 1;
+        } else if (reg.participationType === 'Team' && reg.teamId) {
+          teamCount += 1;
+          const teamSize = 1 + (reg.teamId.currentMembers ? reg.teamId.currentMembers.length : 0);
+          totalParticipants += teamSize;
+        }
+      }
+
+      return {
+        ...event,
+        individualCount,
+        teamCount,
+        totalParticipants,
+        attendees: totalParticipants // fallback
+      };
+    }));
+
     res.status(200).json({
       success: true,
-      events
+      events: eventsWithAttendees
     });
   } catch (error) {
     res.status(500).json({
