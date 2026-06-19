@@ -46,6 +46,14 @@ export const getEvents = async (req, res) => {
         }
       }
 
+      console.log(`Event [${event._id}] Stats:`, {
+        eventId: event._id,
+        individualCount,
+        teamCount,
+        teamParticipants: totalParticipants - individualCount,
+        totalParticipants
+      });
+
       return {
         ...event,
         individualCount,

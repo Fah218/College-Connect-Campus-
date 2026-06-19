@@ -37,8 +37,8 @@ export default function StudentDashboard() {
 
   const teamHackathonIds = (teamRequests || [])
     .filter(tr => 
-      String(tr.owner?.id) === String(user?.id) || String(tr.owner?._id) === String(user?._id) ||
-      tr.members?.some(m => String(m.id) === String(user?.id) || String(m._id) === String(user?._id))
+      String(tr.createdBy) === String(user?.id) || String(tr.createdBy) === String(user?._id) ||
+      (tr.currentMembers || []).some(m => String(m.id) === String(user?.id) || String(m._id) === String(user?._id))
     )
     .map(tr => String(tr.hackathonId));
 
@@ -52,7 +52,7 @@ export default function StudentDashboard() {
     jr.status === 'pending' && 
     (teamRequests || []).some(tr => 
       (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) && 
-      (String(tr.owner?.id) === String(user?.id) || String(tr.owner?._id) === String(user?._id))
+      (String(tr.createdBy) === String(user?.id) || String(tr.createdBy) === String(user?._id))
     )
   ).length;
 

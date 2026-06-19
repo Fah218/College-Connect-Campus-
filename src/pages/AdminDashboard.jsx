@@ -630,7 +630,7 @@ function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStat
     if (!clubName) return; // Skip if no club associated
 
     // Find the real club head from DB
-    const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.toLowerCase() === clubName.toLowerCase());
+    const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === clubName.trim().toLowerCase());
     const realHead = headObj ? headObj.name : 'Pending Assignment';
 
     if (!clubMap[clubName]) {
@@ -654,8 +654,11 @@ function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStat
     if (clubMap[rc.clubName]) {
       clubMap[rc.clubName].isArchived = rc.isArchived;
       clubMap[rc.clubName].realId = rc._id;
+      // also update the head in case the real club head loaded later but event matched first
+      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === rc.clubName.trim().toLowerCase());
+      if (headObj) clubMap[rc.clubName].head = headObj.name;
     } else {
-      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.toLowerCase() === rc.clubName.toLowerCase());
+      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === rc.clubName.trim().toLowerCase());
       const realHead = headObj ? headObj.name : 'Pending Assignment';
       clubMap[rc.clubName] = {
         id: rc.clubName,

@@ -27,7 +27,7 @@ export default function ClubHeadProfilePage() {
   const participationData = myEvents.length > 0 
     ? myEvents.slice(0, 5).map(e => ({
         event: e.title.substring(0, 15) + (e.title.length > 15 ? '...' : ''),
-        participants: e.attendees || 0
+        participants: e.totalParticipants || 0
       }))
     : [
         { event: 'Tech Meetup', participants: 120 },

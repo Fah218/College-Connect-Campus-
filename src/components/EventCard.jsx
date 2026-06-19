@@ -60,7 +60,11 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Users size={16} className="text-primary-500" />
-          {event.attendees || 0}/{event.maxParticipants || event.capacity || 'Unlimited'} attendees
+          {event.category === 'Hackathon' || event.participationType === 'Team' ? (
+            <span>{event.teamCount || 0} Teams ({event.totalParticipants || 0} Participants)</span>
+          ) : (
+            <span>{event.totalParticipants || event.individualCount || 0}/{event.maxParticipants || event.capacity || 'Unlimited'} registered</span>
+          )}
         </div>
       </div>
 
@@ -100,10 +104,10 @@ export default function EventCard({ event, onRegister, isRegistered }) {
       {/* Register button */}
       {onRegister && (
         <Link
-          to={event.category === 'Hackathon' ? '/hackathons' : `/events/${event.id || event._id}/register`}
+          to={event.category === 'Hackathon' ? `/hackathons/${event.id || event._id}` : `/events/${event.id || event._id}/register`}
           className="block w-full py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 text-center"
         >
-          {event.category === 'Hackathon' ? 'Form Team / Join' : 'Register Now'}
+          {event.category === 'Hackathon' ? 'View Hackathon' : 'Register Now'}
         </Link>
       )}
     </div>

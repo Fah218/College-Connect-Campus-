@@ -69,12 +69,6 @@ export const useHackathonStore = create(
           }));
 
           const dbTeamRequests = teamRes.data.teamRequests.map(tr => {
-            // Recover members data by combining the owner and all accepted join requests!
-            const ownerMember = { id: tr.createdBy || 'unknown', name: 'Team Lead' };
-            const acceptedMembers = dbJoinRequests
-              .filter(jr => String(jr.teamRequestId) === String(tr._id) && jr.status === 'accepted')
-              .map(jr => jr.sender);
-
             return {
               ...tr,
               _id: tr._id,
@@ -86,8 +80,8 @@ export const useHackathonStore = create(
               requiredSkills: tr.requiredSkills || tr.skills || [],
               teamSizeLimit: tr.teamSizeLimit || 4,
               status: tr.status || 'open',
-              owner: { id: tr.createdBy || 'unknown' }, // map back to owner for UI compatibility
-              members: [ownerMember, ...acceptedMembers]
+              createdBy: tr.createdBy || 'unknown',
+              currentMembers: tr.currentMembers || []
             };
           });
           
@@ -109,7 +103,7 @@ export const useHackathonStore = create(
       getJoinRequestsForOwner: (userId) =>
         (get().joinRequests || []).filter(jr =>
           (get().teamRequests || []).find(tr =>
-            tr._id === jr.teamRequestId && String(tr.owner?.id) === String(userId)
+            (tr._id === jr.teamRequestId || tr.id === jr.teamRequestId) && String(tr.createdBy) === String(userId)
           )
         ),
 
@@ -120,7 +114,7 @@ export const useHackathonStore = create(
         if (!userId) return null;
         return (get().teamRequests || []).find(tr =>
           String(tr.hackathonId) === String(hackathonId) &&
-          (tr.members || []).some(m => m && (String(m.id || m._id || '') === String(userId)))
+          (String(tr.createdBy) === String(userId) || (tr.currentMembers || []).some(m => m && (String(m.id || m._id || '') === String(userId))))
         );
       },
 
@@ -139,7 +133,7 @@ export const useHackathonStore = create(
             description: data.description || 'No description provided',
             roles: Array.isArray(data.roles) ? data.roles : (Array.isArray(data.requiredRoles) ? data.requiredRoles.map(r => r.role || r) : []),
             skills: data.skills || data.requiredSkills || [],
-            createdBy: data.owner?.id ? String(data.owner.id) : 'Unknown'
+            createdBy: data.createdBy || data.owner?.id ? String(data.createdBy || data.owner.id) : 'Unknown'
           };
           const response = await axios.post('http://localhost:5001/api/teams/request', payload);
           const dbReq = response.data.teamRequest;
@@ -151,8 +145,8 @@ export const useHackathonStore = create(
             description:   data.description,
             requiredRoles: data.requiredRoles || [],
             requiredSkills: data.requiredSkills || [],
-            owner:         data.owner,
-            members:       [data.owner].filter(Boolean),
+            createdBy:     payload.createdBy,
+            currentMembers:[],
             joinRequests:  [],
             status:        'open',
             createdAt:     dbReq.createdAt
@@ -217,7 +211,7 @@ export const useHackathonStore = create(
             )
 
             // notify the team owner
-            const ownerId = String(teamReq.owner?.id)
+            const ownerId = String(teamReq.createdBy)
             const prevOwnerNotifs = state.userNotifications[ownerId] || []
             const newNotif = {
               id:        Date.now().toString() + 'n',
@@ -270,16 +264,16 @@ export const useHackathonStore = create(
             // add sender to team members
             const updatedTRs = state.teamRequests.map(tr => {
               if (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) {
-                const members = tr.members || [];
+                const members = tr.currentMembers || [];
                 const isMember = members.some(m => String(m.id) === String(jr.sender?.id));
                 const newMembers = isMember ? members : [...members, jr.sender];
                 
                 // Also check if full
-                const isFull = newMembers.length >= (tr.teamSizeLimit || 4);
+                const isFull = newMembers.length + 1 >= (tr.teamSizeLimit || 4);
                 
                 return {
                   ...tr,
-                  members: newMembers,
+                  currentMembers: newMembers,
                   status: isFull ? 'full' : tr.status
                 };
               }

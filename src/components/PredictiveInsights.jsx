@@ -35,7 +35,7 @@ export default function PredictiveInsights({ event, historicalEvents }) {
             </span>
           </div>
           <p className="text-2xl font-bold text-blue-600 mb-1">
-            ~{attendancePrediction.predicted} attendees
+            ~{attendancePrediction.predicted} participants
           </p>
           <p className="text-xs text-gray-600">
             Based on {attendancePrediction.basedOn} similar events

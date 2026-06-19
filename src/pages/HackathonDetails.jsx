@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
+import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Bell } from 'lucide-react'
 import { format, isValid } from 'date-fns'
@@ -29,7 +30,6 @@ export default function HackathonDetails() {
   const [showPostForm, setShowPostForm]       = useState(false)
   const [showInbox, setShowInbox]             = useState(true)
   const [joinMsg, setJoinMsg]                 = useState({})
-  const [registered, setRegistered]           = useState(false)
   const syncedNotifIds = useRef(new Set())
 
   // Strip prefixes (ev- or st-) if present for searching
@@ -89,7 +89,7 @@ export default function HackathonDetails() {
   const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id) : null
   const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id) || []).filter(j => String(j.hackathonId) === h.id) : []
   
-  const isTeamOwner = myTeam && user && String(myTeam.owner?.id) === String(user.id);
+  const isTeamOwner = myTeam && user && String(myTeam.createdBy) === String(user.id);
 
   // Only Team Lead can see the inbox
   const teamInbox = isTeamOwner ? (store.joinRequests || []).filter(jr => 
@@ -100,10 +100,12 @@ export default function HackathonDetails() {
   // Calculate max team size from string like "Up to 4" or "4", but myTeam already has teamSizeLimit
   const hMaxTeamSize = myTeam?.teamSizeLimit || parseInt(String(h.teamSize).replace(/\D/g, '')) || 4;
 
+  const { registrations } = useRegistrationStore()
+  const isRegisteredBackend = registrations.some(r => String(r.eventId?._id || r.eventId) === String(h.id))
+
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
-    setRegistered(true)
-    addNotification({ title: 'Success!', message: `Registered for ${h.title}`, priority: 'high' })
+    navigate(`/events/${h.id}/register`)
   }
 
   const handleSendJoin = (reqId, details) => {
@@ -233,9 +235,9 @@ export default function HackathonDetails() {
           <h2 className="text-xl font-bold mb-6">Teammate Finder</h2>
           
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <button onClick={handleRegister} disabled={registered}
-              className={`flex-1 py-3 rounded-xl font-bold transition ${registered ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-              {registered ? '✓ Registered' : 'Register Team'}
+            <button onClick={handleRegister} disabled={isRegisteredBackend}
+              className={`flex-1 py-3 rounded-xl font-bold transition ${isRegisteredBackend ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+              {isRegisteredBackend ? '✓ Registered' : 'Register'}
             </button>
             <button onClick={() => setShowTeamSection(!showTeamSection)}
               className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700">
@@ -302,7 +304,7 @@ export default function HackathonDetails() {
               <div className="flex justify-between items-center mb-3">
                 <div>
                   <p className="font-bold text-primary-800 text-lg">My Team: {myTeam.teamName || 'Team'}</p>
-                  <p className="text-xs font-semibold text-primary-600 mt-1">{(myTeam.members || []).length} / {hMaxTeamSize} Members ({hMaxTeamSize - (myTeam.members || []).length} slots remaining)</p>
+                  <p className="text-xs font-semibold text-primary-600 mt-1">{(myTeam.currentMembers || []).length + 1} / {hMaxTeamSize} Members ({hMaxTeamSize - ((myTeam.currentMembers || []).length + 1)} slots remaining)</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className={`px-2 py-1 text-white text-[10px] rounded font-bold uppercase ${myTeam.status === 'full' ? 'bg-red-500' : 'bg-primary-600'}`}>
@@ -317,7 +319,21 @@ export default function HackathonDetails() {
               </div>
               
               <div className="space-y-2">
-                {(myTeam.members || []).map((m, idx) => m && (
+                {myTeam && (
+                  <div className="flex items-center justify-between bg-white border border-primary-100 rounded-lg p-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-[10px] font-bold">
+                        T
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-800">Team Lead</p>
+                        <p className="text-[10px] text-gray-500">Creator</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold uppercase">Lead</span>
+                  </div>
+                )}
+                {(myTeam.currentMembers || []).map((m, idx) => m && (
                   <div key={m.id || m._id || idx} className="flex items-center justify-between bg-white border border-primary-100 rounded-lg p-2.5">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-[10px] font-bold">
@@ -328,11 +344,7 @@ export default function HackathonDetails() {
                         <p className="text-[10px] text-gray-500">{m.email}</p>
                       </div>
                     </div>
-                    {m.id === myTeam.owner?.id ? (
-                      <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold uppercase">Lead</span>
-                    ) : (
-                      <a href={`mailto:${m.email}`} className="text-[10px] text-primary-600 hover:underline font-medium">Contact</a>
-                    )}
+                    <a href={`mailto:${m.email}`} className="text-[10px] text-primary-600 hover:underline font-medium">Contact</a>
                   </div>
                 ))}
               </div>
@@ -348,13 +360,13 @@ export default function HackathonDetails() {
                 {!myTeam && <button onClick={() => setShowPostForm(true)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg font-bold">Post Request</button>}
               </div>
               {requests.map(req => {
-                const memberCount = (req.members || []).length;
+                const memberCount = (req.currentMembers || []).length + 1;
                 const reqTeamSizeLimit = req.teamSizeLimit || hMaxTeamSize;
                 // If team is full, do not show the team request in the browse list
                 if (req.status === 'full' || memberCount >= reqTeamSizeLimit) return null;
 
-                const isOwner = user?.id && req.owner?.id && String(req.owner.id) === String(user.id)
-                const isMember = user?.id && (req.members || []).some(m => m && String(m.id || m._id || '') === String(user.id))
+                const isOwner = user?.id && req.createdBy && String(req.createdBy) === String(user.id)
+                const isMember = user?.id && (req.currentMembers || []).some(m => m && String(m.id || m._id || '') === String(user.id))
                 const myJR = user?.id && myJoinReqs.find(j => String(j.teamRequestId) === String(req._id) || String(j.teamRequestId) === String(req.id))
 
                 return (
@@ -453,7 +465,7 @@ export default function HackathonDetails() {
         <PostRequestModal
           onClose={() => setShowPostForm(false)}
           onSubmit={(data) => {
-            store.addTeamRequest({ ...data, hackathonId: h.id, owner: { id: user.id, name: user.name, email: user.email } })
+            store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user.id })
             addNotification({ title: 'Request Posted', message: 'Your team request is live!', priority: 'medium' })
             setShowPostForm(false)
           }}

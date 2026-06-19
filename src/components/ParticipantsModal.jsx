@@ -33,12 +33,12 @@ export default function ParticipantsModal({ event, onClose }) {
     } else {
       csvContent += "Team Name,Team Lead,Lead Email,Member Names,Member Emails,Team Size,Registration Date\n";
       teamRegs.forEach(reg => {
-        const teamName = (reg.teamId?.name || 'Unknown Team').replace(/,/g, ' ');
-        const lead = (reg.teamId?.owner?.name || 'N/A').replace(/,/g, ' ');
-        const leadEmail = (reg.teamId?.owner?.email || 'N/A').replace(/,/g, ' ');
-        const members = (reg.teamId?.members || []).map(m => m.name).join(' | ').replace(/,/g, ' ');
-        const memberEmails = (reg.teamId?.members || []).map(m => m.email).join(' | ').replace(/,/g, ' ');
-        const size = (reg.teamId?.members ? reg.teamId.members.length + 1 : 1);
+        const teamName = (reg.teamId?.title || reg.teamId?.name || 'Unknown Team').replace(/,/g, ' ');
+        const lead = (reg.teamId?.createdBy?.name || 'N/A').replace(/,/g, ' ');
+        const leadEmail = (reg.teamId?.createdBy?.email || 'N/A').replace(/,/g, ' ');
+        const members = (reg.teamId?.currentMembers || []).map(m => m.name || m.email).join(' | ').replace(/,/g, ' ');
+        const memberEmails = (reg.teamId?.currentMembers || []).map(m => m.email).join(' | ').replace(/,/g, ' ');
+        const size = (reg.teamId?.currentMembers ? reg.teamId.currentMembers.length + 1 : 1);
         const date = format(new Date(reg.createdAt), 'MMM dd yyyy');
         csvContent += `${teamName},${lead},${leadEmail},${members},${memberEmails},${size},${date}\n`;
       });
@@ -61,8 +61,8 @@ export default function ParticipantsModal({ event, onClose }) {
             <p className="text-sm text-gray-500 mt-1">
               {event.title} • {
                 isTeamEvent 
-                  ? `${event.teamCount || teamRegs.length} Teams • ${event.totalParticipants || 0} Total Participants`
-                  : `${event.individualCount || individualRegs.length} Registered Students`
+                  ? `${teamRegs.length} Teams • ${teamRegs.reduce((acc, r) => acc + 1 + (r.teamId?.currentMembers?.length || 0), 0) + individualRegs.length} Total Participants`
+                  : `${individualRegs.length} Registered Students`
               }
             </p>
           </div>
@@ -105,18 +105,18 @@ export default function ParticipantsModal({ event, onClose }) {
                         <tbody className="divide-y divide-gray-100">
                           {teamRegs.map(reg => (
                             <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-gray-800">{reg.teamId?.name || 'Unknown Team'}</td>
+                              <td className="px-6 py-4 font-medium text-gray-800">{reg.teamId?.title || reg.teamId?.name || 'Unknown Team'}</td>
                               <td className="px-6 py-4">
-                                <div className="font-medium">{reg.teamId?.owner?.name || 'N/A'}</div>
+                                <div className="font-medium">{reg.teamId?.createdBy?.name || 'N/A'}</div>
                               </td>
                               <td className="px-6 py-4 text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Mail size={14} className="text-gray-400" />
-                                  {reg.teamId?.owner?.email || 'N/A'}
+                                  {reg.teamId?.createdBy?.email || 'N/A'}
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-gray-600">
-                                {reg.teamId?.members ? reg.teamId.members.length + 1 : 1}
+                                {reg.teamId?.currentMembers ? reg.teamId.currentMembers.length + 1 : 1}
                               </td>
                               <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                 {format(new Date(reg.createdAt), 'MMM dd, yyyy')}

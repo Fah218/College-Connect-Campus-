@@ -60,7 +60,7 @@ export default function ExploreEventsPage() {
         return aDeadline - bDeadline
       }
       if (sortBy === 'Most Popular') {
-        return (b.attendees || 0) - (a.attendees || 0)
+        return (b.totalParticipants || 0) - (a.totalParticipants || 0)
       }
       
       // Newest

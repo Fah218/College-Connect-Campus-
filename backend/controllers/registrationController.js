@@ -39,6 +39,17 @@ export const registerForEvent = async (req, res) => {
         return res.status(400).json({ message: 'You have already registered for this event individually.' });
       }
 
+      // Cross-check: is student in a registered team?
+      const teamRegs = await Registration.find({ eventId, participationType: 'Team' }).populate('teamId');
+      const inTeam = teamRegs.some(reg => {
+        if (!reg.teamId) return false;
+        if (String(reg.teamId.createdBy) === String(studentId)) return true;
+        return reg.teamId.currentMembers?.some(m => String(m.id || m) === String(studentId));
+      });
+      if (inTeam) {
+        return res.status(400).json({ message: 'You are already registered for this event as part of a team.' });
+      }
+
       const newRegistration = new Registration({
         eventId,
         participationType,
@@ -48,7 +59,7 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
-      // Increment attendees count without triggering full document validation
+      // Increment attendees count
       await Event.findByIdAndUpdate(eventId, { $inc: { attendees: 1 } });
 
       return res.status(201).json({ message: 'Successfully registered!', registration: newRegistration });
@@ -60,15 +71,46 @@ export const registerForEvent = async (req, res) => {
         return res.status(404).json({ message: 'Team not found' });
       }
 
-      // Check if student is the owner
-      if (String(team.owner) !== String(studentId) && String(team.owner._id) !== String(studentId)) {
-        return res.status(403).json({ message: 'Only the team owner can register the team for an event.' });
+      // Check if student is the creator
+      if (String(team.createdBy) !== String(studentId)) {
+        return res.status(403).json({ message: 'Only the team creator can register the team for an event.' });
       }
 
       // Check for duplicate team registration
       const existing = await Registration.findOne({ eventId, teamId, participationType: 'Team' });
       if (existing) {
         return res.status(400).json({ message: 'Your team is already registered for this event.' });
+      }
+
+      // Cross-check: are any team members already registered individually or in another team?
+      const individualRegs = await Registration.find({ eventId, participationType: 'Individual' });
+      const individuallyRegisteredIds = individualRegs.map(r => String(r.studentId));
+      
+      const teamMemberIds = [String(team.createdBy)];
+      if (team.currentMembers) {
+        team.currentMembers.forEach(m => teamMemberIds.push(String(m.id || m)));
+      }
+
+      const hasIndividuallyRegistered = teamMemberIds.some(id => individuallyRegisteredIds.includes(id));
+      if (hasIndividuallyRegistered) {
+        return res.status(400).json({ message: 'One or more team members are already registered individually.' });
+      }
+
+      // Cross-check other registered teams
+      const otherTeamRegs = await Registration.find({ eventId, participationType: 'Team' }).populate('teamId');
+      let overlappingMember = false;
+      otherTeamRegs.forEach(reg => {
+        if (!reg.teamId) return;
+        const otherMembers = [String(reg.teamId.createdBy)];
+        reg.teamId.currentMembers?.forEach(m => otherMembers.push(String(m.id || m)));
+        
+        if (teamMemberIds.some(id => otherMembers.includes(id))) {
+          overlappingMember = true;
+        }
+      });
+
+      if (overlappingMember) {
+        return res.status(400).json({ message: 'One or more team members are already in another registered team for this event.' });
       }
 
       const newRegistration = new Registration({
@@ -79,8 +121,8 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
-      // Increment attendees by team size without triggering full document validation
-      const teamSize = (team.members ? team.members.length : 0) + 1; // members + owner
+      // Increment attendees by team size
+      const teamSize = teamMemberIds.length;
       await Event.findByIdAndUpdate(eventId, { $inc: { attendees: teamSize } });
 
       return res.status(201).json({ message: 'Team successfully registered!', registration: newRegistration });
@@ -111,11 +153,12 @@ export const getStudentRegistrations = async (req, res) => {
     // Find all individual registrations
     const individualRegs = await Registration.find({ studentId, participationType: 'Individual' }).populate('eventId');
 
-    // Find all teams this student belongs to (owner or member)
+    // Find all teams this student belongs to (creator or member)
     const teams = await TeamRequest.find({
       $or: [
-        { owner: studentId },
-        { members: studentId } // Assuming members array contains ObjectIds
+        { createdBy: studentId },
+        { 'currentMembers.id': studentId },
+        { currentMembers: studentId } // fallback if stored directly
       ]
     });
     
@@ -143,18 +186,16 @@ export const getEventRegistrations = async (req, res) => {
     const { eventId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      return res.status(200).json({ registrations: [] }); // return empty gracefully
+      return res.status(200).json({ registrations: [] });
     }
-
-    // Optional: Verify that the user is the club head for this event
     
     const registrations = await Registration.find({ eventId })
       .populate('studentId', 'name email department year rollNumber phone')
       .populate({
         path: 'teamId',
         populate: [
-          { path: 'owner', select: 'name email department' },
-          { path: 'members', select: 'name email department' }
+          { path: 'createdBy', select: 'name email department' }
+          // currentMembers is usually mixed type without direct ref, so we rely on data within it
         ]
       })
       .sort({ createdAt: -1 });
@@ -180,7 +221,7 @@ export const getAdminStats = async (req, res) => {
     let teamParticipants = 0;
     teams.forEach(reg => {
       if (reg.teamId) {
-        teamParticipants += 1 + (reg.teamId.members ? reg.teamId.members.length : 0);
+        teamParticipants += 1 + (reg.teamId.currentMembers ? reg.teamId.currentMembers.length : 0);
       }
     });
 

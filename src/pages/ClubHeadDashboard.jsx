@@ -76,7 +76,7 @@ export default function ClubHeadDashboard() {
     Title: e.title,
     Date: e.date,
     Status: e.status,
-    Attendees: e.attendees,
+    Attendees: e.totalParticipants || 0,
     Capacity: e.capacity
   }))
   
@@ -119,7 +119,7 @@ export default function ClubHeadDashboard() {
           <StatCard icon={Calendar} title="Total Events" value={myEvents.length} color="primary" />
           <StatCard icon={CheckCircle} title="Approved" value={approvedEvents.length} color="green" />
           <StatCard icon={Clock} title="Pending Approval" value={pendingEvents.length} color="orange" />
-          <StatCard icon={Users} title="Total Attendees" value={myEvents.reduce((sum, e) => sum + (e.attendees || 0), 0)} color="purple" />
+          <StatCard icon={Users} title="Total Attendees" value={myEvents.reduce((sum, e) => sum + (e.totalParticipants || 0), 0)} color="purple" />
         </div>
         
         {/* View Toggle */}
