@@ -35,18 +35,11 @@ export default function StudentDashboard() {
   const approvedEvents = events.filter(e => e.status === 'approved')
   const recommendations = getRecommendedEvents(approvedEvents, registeredEvents)
 
-  const teamHackathonIds = (teamRequests || [])
-    .filter(tr => 
-      String(tr.createdBy) === String(user?.id) || String(tr.createdBy) === String(user?._id) ||
-      (tr.currentMembers || []).some(m => String(m.id) === String(user?.id) || String(m._id) === String(user?._id))
-    )
-    .map(tr => String(tr.hackathonId));
-
-  const individualHackathonIds = (registeredEvents || [])
+  const registeredHackathonIds = (registeredEvents || [])
     .filter(e => e.category === 'Hackathon')
     .map(e => String(e.id || e._id));
 
-  const joinedHackathonsCount = new Set([...teamHackathonIds, ...individualHackathonIds]).size;
+  const joinedHackathonsCount = new Set([...registeredHackathonIds]).size;
   
   const teamInvitationsCount = (joinRequests || []).filter(jr => 
     jr.status === 'pending' && 

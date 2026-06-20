@@ -12,8 +12,8 @@ const joinRequestSchema = new mongoose.Schema({
     required: true
   },
   applicantId: {
-    type: String, // String to prevent CastError
-    ref: "User",
+    type: String, // using String to avoid cast errors with mock data
+    ref: "Student",
     required: true
   },
   applicantName: {

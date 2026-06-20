@@ -85,9 +85,9 @@ export default function HackathonDetails() {
     club: raw.club,
   }
 
-  const requests = store.getTeamRequestsForHackathon?.(h.id) || []
-  const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id) : null
-  const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id) || []).filter(j => String(j.hackathonId) === h.id) : []
+  const requests = store.getTeamRequestsForHackathon?.(h.id || h._id) || []
+  const myTeam = user ? store.getMyTeamForHackathon?.(h.id || h._id, user.id || user._id) : null
+  const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id || user._id) || []).filter(j => String(j.hackathonId) === String(h.id || h._id)) : []
   
   const isTeamOwner = myTeam && user && String(myTeam.createdBy) === String(user.id);
 
@@ -359,15 +359,21 @@ export default function HackathonDetails() {
                 <h3 className="font-bold">Team Requests</h3>
                 {!myTeam && <button onClick={() => setShowPostForm(true)} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg font-bold">Post Request</button>}
               </div>
-              {requests.map(req => {
+              {requests
+                .filter(req => req.status === 'open' && ((req.currentMembers || []).length + 1) < (req.teamSizeLimit || hMaxTeamSize))
+                .length === 0 ? (
+                  <p className="text-gray-500 bg-gray-50 p-4 rounded-xl border text-sm italic">
+                    No active team requests available for this hackathon. Be the first to create one.
+                  </p>
+                ) : requests
+                .filter(req => req.status === 'open' && ((req.currentMembers || []).length + 1) < (req.teamSizeLimit || hMaxTeamSize))
+                .map(req => {
                 const memberCount = (req.currentMembers || []).length + 1;
                 const reqTeamSizeLimit = req.teamSizeLimit || hMaxTeamSize;
-                // If team is full, do not show the team request in the browse list
-                if (req.status === 'full' || memberCount >= reqTeamSizeLimit) return null;
-
                 const isOwner = user?.id && req.createdBy && String(req.createdBy) === String(user.id)
                 const isMember = user?.id && (req.currentMembers || []).some(m => m && String(m.id || m._id || '') === String(user.id))
                 const myJR = user?.id && myJoinReqs.find(j => String(j.teamRequestId) === String(req._id) || String(j.teamRequestId) === String(req.id))
+
 
                 return (
                   <div key={req._id} className="border rounded-xl p-4 bg-gray-50 hover:border-primary-200 transition-colors">

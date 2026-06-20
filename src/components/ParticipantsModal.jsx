@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { X, Users, Mail, Building, Calendar, Medal, Download, Phone } from 'lucide-react'
+import { X, Users, Mail, Building, Calendar, Medal, Download, Phone, Eye } from 'lucide-react'
 import { useRegistrationStore } from '../store/registrationStore'
 import { format } from 'date-fns'
 
 export default function ParticipantsModal({ event, onClose }) {
   const { eventRegistrations, fetchEventRegistrations, isLoading } = useRegistrationStore()
+  const [selectedTeam, setSelectedTeam] = useState(null)
   
   useEffect(() => {
     if (event?.id || event?._id) {
@@ -100,6 +101,7 @@ export default function ParticipantsModal({ event, onClose }) {
                             <th className="px-6 py-4 font-medium">Lead Email</th>
                             <th className="px-6 py-4 font-medium">Team Size</th>
                             <th className="px-6 py-4 font-medium">Reg Date</th>
+                            <th className="px-6 py-4 font-medium text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -120,6 +122,15 @@ export default function ParticipantsModal({ event, onClose }) {
                               </td>
                               <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                 {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button
+                                  onClick={() => setSelectedTeam(reg)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+                                >
+                                  <Eye size={14} />
+                                  View Team
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -200,6 +211,70 @@ export default function ParticipantsModal({ event, onClose }) {
           </button>
         </div>
       </div>
+
+      {selectedTeam && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-800">Team Details</h3>
+              <button onClick={() => setSelectedTeam(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1">Team Name</p>
+                  <p className="font-semibold text-gray-800">{selectedTeam.teamId?.title || selectedTeam.teamId?.name || 'Unknown Team'}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1">Registration Date</p>
+                  <p className="font-semibold text-gray-800">{format(new Date(selectedTeam.createdAt), 'MMMM dd, yyyy')}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1">Team Size</p>
+                  <p className="font-semibold text-gray-800">{selectedTeam.teamId?.currentMembers ? selectedTeam.teamId.currentMembers.length + 1 : 1} Members</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Lead</h4>
+                <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-100">
+                  <span className="font-medium text-primary-900">{selectedTeam.teamId?.createdBy?.name || 'N/A'}</span>
+                  <div className="flex items-center gap-2 text-primary-700 text-sm">
+                    <Mail size={14} />
+                    {selectedTeam.teamId?.createdBy?.email || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Members</h4>
+                {selectedTeam.teamId?.currentMembers && selectedTeam.teamId.currentMembers.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedTeam.teamId.currentMembers.map((m, idx) => (
+                      <li key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <span className="font-medium text-gray-800">{m.name || 'N/A'}</span>
+                        <div className="flex items-center gap-2 text-gray-600 text-sm">
+                          <Mail size={14} />
+                          {m.email || 'N/A'}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 italic text-sm">No additional members.</p>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end">
+              <button onClick={() => setSelectedTeam(null)} className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

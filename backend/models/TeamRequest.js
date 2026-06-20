@@ -8,7 +8,7 @@ const teamRequestSchema = new mongoose.Schema({
   },
   createdBy: {
     type: String, // Using String to prevent CastError with current mock IDs
-    ref: "User",
+    ref: "Student",
     required: true
   },
   title: {

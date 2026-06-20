@@ -121,6 +121,10 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
+      // Lock the team so it no longer accepts applications
+      team.status = 'closed';
+      await team.save();
+
       // Increment attendees by team size
       const teamSize = teamMemberIds.length;
       await Event.findByIdAndUpdate(eventId, { $inc: { attendees: teamSize } });
@@ -203,7 +207,7 @@ export const getEventRegistrations = async (req, res) => {
     res.status(200).json({ registrations });
   } catch (error) {
     console.error('Error fetching event registrations:', error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
 
