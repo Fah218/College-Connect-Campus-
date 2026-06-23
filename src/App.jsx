@@ -11,7 +11,8 @@ import ClubHeadDashboard from './pages/ClubHeadDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import HackathonPage from './pages/HackathonPage'
 import HackathonDetails from './pages/HackathonDetails'
-import TeammateFinder from './pages/TeammateFinder'
+import HackathonTeammateFinder from './pages/HackathonTeammateFinder'
+
 import EventRegistrationPage from './pages/EventRegistrationPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProfilePage from './pages/StudentProfilePage'
@@ -71,7 +72,8 @@ function App() {
         <Route path="/explore-events" element={<ExploreEventsPage />} />
         <Route path="/hackathons" element={<HackathonPage />} />
         <Route path="/hackathons/:id" element={<HackathonDetails />} />
-        <Route path="/teammate-finder" element={<TeammateFinder />} />
+        <Route path="/hackathons/:id/teammates" element={<HackathonTeammateFinder />} />
+
         <Route path="/events/:id/register" element={<EventRegistrationPage />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />

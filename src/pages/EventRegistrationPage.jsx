@@ -330,7 +330,7 @@ export default function EventRegistrationPage() {
                       
                       {!showOfflineTeamForm ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                          <Link to="/teammate-finder" state={{ hackathonId: event.id || event._id }} className="flex flex-col items-center justify-center p-6 border-2 border-primary-100 bg-primary-50 rounded-xl hover:border-primary-500 hover:bg-primary-100 transition-colors group cursor-pointer">
+                          <Link to={`/hackathons/${event.id || event._id}`} className="flex flex-col items-center justify-center p-6 border-2 border-primary-100 bg-primary-50 rounded-xl hover:border-primary-500 hover:bg-primary-100 transition-colors group cursor-pointer">
                             <Search className="text-primary-500 mb-3 group-hover:scale-110 transition-transform" size={32} />
                             <span className="font-bold text-primary-900">Find Teammates</span>
                             <span className="text-xs text-primary-600 mt-1">Browse open requests</span>
