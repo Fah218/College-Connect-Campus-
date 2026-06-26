@@ -43,6 +43,33 @@ export const createTeamRequest = async (req, res) => {
   }
 };
 
+export const updateTeamRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentMembers } = req.body;
+    
+    const teamRequest = await TeamRequest.findById(id);
+    if (!teamRequest) {
+      return res.status(404).json({ success: false, message: 'Team request not found' });
+    }
+    
+    if (currentMembers !== undefined) {
+      teamRequest.currentMembers = currentMembers;
+    }
+    
+    await teamRequest.save();
+    
+    res.status(200).json({
+      success: true,
+      data: teamRequest,
+      message: 'Team request updated successfully'
+    });
+  } catch (error) {
+    console.error('Update Team Request Error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
 export const getTeamRequests = async (req, res) => {
   try {
     const { hackathonId } = req.query;

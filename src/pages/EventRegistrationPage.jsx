@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import { useHackathonStore } from '../store/hackathonStore'
 import Navbar from '../components/Navbar'
-import { Calendar, MapPin, Users, CheckCircle, Search, PlusCircle, ShieldAlert } from 'lucide-react'
+import { Calendar, MapPin, Users, CheckCircle, Search, PlusCircle, ShieldAlert, Trash2, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
 import axios from 'axios'
 
@@ -14,12 +14,18 @@ export default function EventRegistrationPage() {
   const navigate = useNavigate()
   const { events } = useEventStore()
   const { user, isAuthenticated, addNotification } = useAuthStore()
-  const { registerIndividual, registerTeam } = useRegistrationStore()
+  const { registerIndividual, registerTeam, registrations, fetchStudentRegistrations } = useRegistrationStore()
   const { teamRequests, fetchHackathonData } = useHackathonStore()
   
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [success, setSuccess] = useState(false)
+  
+  const [showAddInline, setShowAddInline] = useState(false)
+  const [inlineMember, setInlineMember] = useState({ name: '', email: '', phone: '' })
+  
+  const [editingMemberId, setEditingMemberId] = useState(null)
+  const [editMemberData, setEditMemberData] = useState({ name: '', email: '', phone: '' })
   
   // Individual Form
   const [formData, setFormData] = useState({
@@ -35,8 +41,27 @@ export default function EventRegistrationPage() {
   const [showOfflineTeamForm, setShowOfflineTeamForm] = useState(false)
   const [offlineTeamData, setOfflineTeamData] = useState({
     title: '',
-    memberEmails: ''
+    members: []
   })
+  
+  const addOfflineMember = () => {
+    setOfflineTeamData({
+      ...offlineTeamData,
+      members: [...offlineTeamData.members, { name: '', email: '', phone: '' }]
+    })
+  }
+
+  const removeOfflineMember = (index) => {
+    const newMembers = [...offlineTeamData.members]
+    newMembers.splice(index, 1)
+    setOfflineTeamData({ ...offlineTeamData, members: newMembers })
+  }
+
+  const updateOfflineMember = (index, field, value) => {
+    const newMembers = [...offlineTeamData.members]
+    newMembers[index][field] = value
+    setOfflineTeamData({ ...offlineTeamData, members: newMembers })
+  }
   
   const event = events.find(e => String(e.id) === String(id) || String(e._id) === String(id))
   
@@ -51,6 +76,12 @@ export default function EventRegistrationPage() {
       fetchHackathonData()
     }
   }, [event])
+
+  useEffect(() => {
+    if (user?.id || user?._id) {
+      fetchStudentRegistrations(user.id || user._id)
+    }
+  }, [user])
 
   if (!event) return <div>Event not found</div>
 
@@ -67,6 +98,8 @@ export default function EventRegistrationPage() {
   const isTeamLead = myTeam && String(myTeam.createdBy) === String(user?.id || user?._id);
   const currentTeamSize = myTeam ? 1 + (myTeam.currentMembers?.length || 0) : 0;
   const isTeamSizeValid = myTeam && currentTeamSize >= (event.teamSizeMin || 1) && currentTeamSize <= (event.maxTeamSize || 99);
+  
+  const isRegisteredBackend = registrations.some(r => String(r.eventId?._id || r.eventId) === String(event?.id || event?._id));
 
   const handleIndividualSubmit = async (e) => {
     e.preventDefault()
@@ -106,13 +139,127 @@ export default function EventRegistrationPage() {
     }
   }
 
-  const handleCreateOfflineTeam = async (e) => {
-    e.preventDefault()
+  const handleAddInlineMember = async () => {
+    if (!inlineMember.name.trim() || !inlineMember.email.trim()) {
+      return setErrorMsg('Full Name and Email are required.')
+    }
+    const allEmails = [user?.email, ...(myTeam.currentMembers || []).map(m => m.email), inlineMember.email].map(e => (e || '').toLowerCase().trim())
+    const uniqueEmails = new Set(allEmails)
+    if (uniqueEmails.size !== allEmails.length) {
+      return setErrorMsg('Duplicate emails are not allowed.')
+    }
+    
     setLoading(true)
     setErrorMsg('')
     try {
-      const emails = offlineTeamData.memberEmails.split(',').map(e => e.trim()).filter(Boolean)
-      const currentMembers = emails.map(email => ({ id: `offline_${email}`, email, name: email.split('@')[0] }))
+      const newMember = {
+        id: `offline_${inlineMember.email.trim()}`,
+        name: inlineMember.name.trim(),
+        email: inlineMember.email.trim(),
+        phone: inlineMember.phone.trim() || undefined,
+        joinedVia: 'offline'
+      }
+      
+      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
+        currentMembers: [...(myTeam.currentMembers || []), newMember]
+      })
+      await fetchHackathonData()
+      setInlineMember({ name: '', email: '', phone: '' })
+      setShowAddInline(false)
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to add member')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId) => {
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const updatedMembers = (myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId)
+      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
+        currentMembers: updatedMembers
+      })
+      await fetchHackathonData()
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to remove member')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveEditMember = async (memberId) => {
+    if (!editMemberData.name.trim() || !editMemberData.email.trim()) {
+      return setErrorMsg('Full Name and Email are required.')
+    }
+    
+    // Check duplicates, excluding the current member being edited
+    const otherEmails = [user?.email, ...(myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId).map(m => m.email)].map(e => (e || '').toLowerCase().trim())
+    if (otherEmails.includes(editMemberData.email.toLowerCase().trim())) {
+      return setErrorMsg('Duplicate emails are not allowed.')
+    }
+
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const updatedMembers = (myTeam.currentMembers || []).map(m => {
+        if (m.id === memberId || m._id === memberId) {
+          return {
+            ...m,
+            name: editMemberData.name.trim(),
+            email: editMemberData.email.trim(),
+            phone: editMemberData.phone.trim() || undefined
+          }
+        }
+        return m
+      })
+      
+      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
+        currentMembers: updatedMembers
+      })
+      await fetchHackathonData()
+      setEditingMemberId(null)
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to update member')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateOfflineTeam = async (e) => {
+    e.preventDefault()
+    
+    // Validate team size
+    const totalSize = 1 + offlineTeamData.members.length;
+    if (totalSize < (event.teamSizeMin || 1) || totalSize > (event.maxTeamSize || 99)) {
+      return setErrorMsg(`Team size must be between ${event.teamSizeMin || 1} and ${event.maxTeamSize || 'Unlimited'}.`);
+    }
+
+    // Validate emails
+    const allEmails = [user?.email, ...offlineTeamData.members.map(m => m.email)].map(e => (e || '').toLowerCase().trim());
+    const uniqueEmails = new Set(allEmails);
+    if (uniqueEmails.size !== allEmails.length) {
+      return setErrorMsg('Duplicate emails are not allowed, and members cannot use the Team Lead\'s email.');
+    }
+
+    // Validate required fields
+    for (const m of offlineTeamData.members) {
+      if (!m.name.trim() || !m.email.trim()) {
+        return setErrorMsg('All members must have a Full Name and Email.');
+      }
+    }
+
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const currentMembers = offlineTeamData.members.map(m => ({ 
+        id: `offline_${m.email.trim()}`, 
+        email: m.email.trim(), 
+        name: m.name.trim(),
+        phone: m.phone.trim() || undefined,
+        joinedVia: 'offline'
+      }))
       
       const payload = {
         hackathonId: event.id || event._id,
@@ -292,30 +439,112 @@ export default function EventRegistrationPage() {
 
                         <div className="space-y-4">
                           <p className="font-semibold text-gray-700 border-b pb-2">Roster</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-900 font-medium">Team Creator <span className="text-xs ml-2 px-2 py-0.5 bg-primary-100 text-primary-800 rounded">Lead</span></span>
+                          <div className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm">
+                            <div className="flex flex-col">
+                              <span className="text-gray-900 font-medium">{user?.name} <span className="text-xs ml-2 px-2 py-0.5 bg-primary-100 text-primary-800 rounded">Team Lead</span></span>
+                              <span className="text-xs text-gray-500">{user?.email}</span>
+                            </div>
                           </div>
                           {(myTeam.currentMembers || []).map((m, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                              <span className="text-gray-600">{m.name || m.email || 'Member'}</span>
+                            <div key={i} className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm">
+                              {editingMemberId === (m.id || m._id) ? (
+                                <div className="w-full">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                                    <div>
+                                      <input type="text" value={editMemberData.name} onChange={(e) => setEditMemberData({...editMemberData, name: e.target.value})} className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-primary-500" placeholder="Full Name" />
+                                    </div>
+                                    <div>
+                                      <input type="email" value={editMemberData.email} onChange={(e) => setEditMemberData({...editMemberData, email: e.target.value})} className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-primary-500" placeholder="Email" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                      <input type="tel" value={editMemberData.phone} onChange={(e) => setEditMemberData({...editMemberData, phone: e.target.value})} className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-primary-500" placeholder="Phone (Optional)" />
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button type="button" onClick={() => handleSaveEditMember(m.id || m._id)} disabled={loading} className="px-3 py-1 bg-primary-600 text-white rounded text-xs font-bold hover:bg-primary-700 disabled:opacity-50">Save</button>
+                                    <button type="button" onClick={() => setEditingMemberId(null)} disabled={loading} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300 disabled:opacity-50">Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex flex-col">
+                                    <span className="text-gray-900 font-medium">{m.name || 'Member'}</span>
+                                    <span className="text-xs text-gray-500">{m.email}</span>
+                                    {m.phone && <span className="text-xs text-gray-400">{m.phone}</span>}
+                                  </div>
+                                  {isTeamLead && !isRegisteredBackend && (
+                                    <div className="flex items-center gap-1">
+                                      <button type="button" onClick={() => { setEditingMemberId(m.id || m._id); setEditMemberData({ name: m.name || '', email: m.email || '', phone: m.phone || '' }) }} className="text-gray-400 hover:text-primary-600 p-2 rounded hover:bg-primary-50 transition-colors">
+                                        <Edit2 size={16} />
+                                      </button>
+                                      <button type="button" onClick={() => handleRemoveMember(m.id || m._id)} className="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors">
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
                           ))}
+                          
+                          {isTeamLead && !isRegisteredBackend && currentTeamSize < (event.maxTeamSize || 99) && (
+                            <>
+                              {!showAddInline ? (
+                                <button type="button" onClick={() => setShowAddInline(true)} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2">
+                                  <PlusCircle size={18} /> Add Member
+                                </button>
+                              ) : (
+                                <div className="bg-gray-50 border rounded-lg p-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                                  <div className="flex justify-between items-center mb-3">
+                                    <span className="font-semibold text-gray-900">Add New Member</span>
+                                    <button type="button" onClick={() => setShowAddInline(false)} className="text-gray-400 hover:text-gray-700 text-sm">Cancel</button>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs text-gray-700 mb-1">Full Name *</label>
+                                        <input type="text" value={inlineMember.name} onChange={(e) => setInlineMember({...inlineMember, name: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm" placeholder="John Doe" />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-gray-700 mb-1">Email *</label>
+                                        <input type="email" value={inlineMember.email} onChange={(e) => setInlineMember({...inlineMember, email: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm" placeholder="john@example.com" />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-700 mb-1">Phone Number (Optional)</label>
+                                      <input type="tel" value={inlineMember.phone} onChange={(e) => setInlineMember({...inlineMember, phone: e.target.value})} className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm" placeholder="+1234567890" />
+                                    </div>
+                                    <button type="button" onClick={handleAddInlineMember} disabled={loading} className="w-full py-2 bg-primary-600 text-white rounded text-sm font-bold hover:bg-primary-700 disabled:opacity-50">
+                                      {loading ? 'Adding...' : 'Save Member'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
 
                       <div className="pt-4 space-y-4">
-                        {!isTeamSizeValid && (
+                        {!isTeamSizeValid && !isRegisteredBackend && (
                           <p className="text-red-600 font-medium text-sm text-center">Your team size does not meet the event requirements. Add more members to register.</p>
                         )}
-                        {!isTeamLead && (
+                        {!isTeamLead && !isRegisteredBackend && (
                           <p className="text-gray-500 font-medium text-sm text-center">Only the Team Lead can officially submit the registration for the event.</p>
                         )}
-                        <button 
-                          onClick={handleTeamRegisterSubmit}
-                          disabled={loading || !isApproved || isPastDeadline || !isTeamSizeValid || !isTeamLead} 
-                          className="w-full py-3.5 bg-primary-600 text-white rounded-lg font-bold text-lg hover:bg-primary-700 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                          {loading ? 'Processing...' : 'Register Team'}
-                        </button>
+                        {!isRegisteredBackend && (
+                          <button 
+                            onClick={handleTeamRegisterSubmit}
+                            disabled={loading || !isApproved || isPastDeadline || !isTeamSizeValid || !isTeamLead} 
+                            className="w-full py-3.5 bg-primary-600 text-white rounded-lg font-bold text-lg hover:bg-primary-700 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            {loading ? 'Processing...' : 'Register Team'}
+                          </button>
+                        )}
+                        {isRegisteredBackend && (
+                          <div className="w-full py-3.5 bg-green-100 text-green-700 border border-green-200 rounded-lg font-bold text-lg text-center flex items-center justify-center gap-2">
+                            <CheckCircle size={20} /> Team Officially Registered
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -351,10 +580,61 @@ export default function EventRegistrationPage() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">Team Name <span className="text-red-500">*</span></label>
                               <input type="text" value={offlineTeamData.title} onChange={(e) => setOfflineTeamData({ ...offlineTeamData, title: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500" required placeholder="e.g. Code Ninjas" />
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Member Emails</label>
-                              <p className="text-xs text-gray-500 mb-2">Enter the emails of your offline teammates, separated by commas.</p>
-                              <textarea value={offlineTeamData.memberEmails} onChange={(e) => setOfflineTeamData({ ...offlineTeamData, memberEmails: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500" rows="3" placeholder="friend1@university.edu, friend2@university.edu" />
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-gray-900 border-b pb-2">Team Members</h4>
+                              
+                              {/* Team Lead Card */}
+                              <div className="bg-white border rounded-lg p-4 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 bg-primary-100 text-primary-800 text-xs font-bold px-2 py-1 rounded-bl-lg">Team Lead</div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Full Name</label>
+                                    <input type="text" value={user?.name || ''} disabled className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-gray-700 text-sm cursor-not-allowed" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Email</label>
+                                    <input type="email" value={user?.email || ''} disabled className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-gray-700 text-sm cursor-not-allowed" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Dynamic Member Cards */}
+                              {offlineTeamData.members.map((member, idx) => (
+                                <div key={idx} className="bg-white border rounded-lg p-4 shadow-sm relative animate-in fade-in slide-in-from-top-4 duration-300">
+                                  <div className="flex justify-between items-center mb-3">
+                                    <span className="text-sm font-bold text-gray-700">Member {idx + 1}</span>
+                                    <button type="button" onClick={() => removeOfflineMember(idx)} className="text-red-500 hover:text-red-700 p-1 transition-colors">
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                                      <input type="text" required value={member.name} onChange={(e) => updateOfflineMember(idx, 'name', e.target.value)} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 text-sm" placeholder="John Doe" />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                                      <input type="email" required value={member.email} onChange={(e) => updateOfflineMember(idx, 'email', e.target.value)} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 text-sm" placeholder="john@example.com" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                      <label className="block text-xs text-gray-700 mb-1">Phone Number (Optional)</label>
+                                      <input type="tel" value={member.phone} onChange={(e) => updateOfflineMember(idx, 'phone', e.target.value)} className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 text-sm" placeholder="+1234567890" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Add Member Button */}
+                              {offlineTeamData.members.length + 1 < (event.maxTeamSize || 99) && (
+                                <button type="button" onClick={addOfflineMember} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2">
+                                  <PlusCircle size={18} /> Add Member
+                                </button>
+                              )}
+                              
+                              <p className="text-xs text-gray-500 text-center mt-2">
+                                Team Size: {offlineTeamData.members.length + 1} / {event.maxTeamSize || 'Unlimited'} 
+                                {event.teamSizeMin > 1 && ` (Min required: ${event.teamSizeMin})`}
+                              </p>
                             </div>
                             <button type="submit" disabled={loading || !offlineTeamData.title} className="w-full py-3 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 disabled:opacity-50">
                               {loading ? 'Creating...' : 'Save & Continue'}

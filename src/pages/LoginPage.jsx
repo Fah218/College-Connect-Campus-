@@ -59,7 +59,7 @@ export default function LoginPage() {
       }
       navigate(routes[role], { replace: true })
     } catch (err) {
-       setError(err.response?.data?.message || 'Error occurred during login. Please check credentials and role.');
+       setError(err.response?.data?.message || err.message || 'Error occurred during login. Please check credentials and role.');
     } finally {
       setLoading(false)
     }

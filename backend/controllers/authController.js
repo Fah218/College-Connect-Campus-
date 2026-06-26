@@ -5,7 +5,8 @@ import ClubCode from '../models/ClubCode.js';
 import bcrypt from 'bcryptjs';
 
 export const registerUser = async (req, res) => {
-  const { role, name, email, password, ...otherData } = req.body;
+  let { role, name, email, password, ...otherData } = req.body;
+  if (email) email = email.trim().toLowerCase();
 
   try {
     // Basic validation
@@ -79,7 +80,8 @@ export const registerUser = async (req, res) => {
 };
 
 export const loginUser = async (req, res) => {
-  const { email, password, role } = req.body;
+  let { email, password, role } = req.body;
+  if (email) email = email.trim().toLowerCase();
   try {
     if (!email || !password || !role) {
       return res.status(400).json({ message: 'Please provide all required fields.' });
