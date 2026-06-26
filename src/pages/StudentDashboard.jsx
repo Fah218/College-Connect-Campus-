@@ -30,7 +30,19 @@ export default function StudentDashboard() {
     }
   }, [user])
   
-  const registeredEvents = registrations.map(r => r.eventId?.title ? r.eventId : events.find(e => String(e.id || e._id) === String(r.eventId))).filter(Boolean);
+  const myRegistrations = registrations.filter(r => {
+    if (r.participationType === 'Individual') {
+      return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
+    }
+    if (r.participationType === 'Team' && r.teamId) {
+      const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
+      const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+      return isLead || isMember;
+    }
+    return false;
+  });
+  
+  const registeredEvents = myRegistrations.map(r => r.eventId?.title ? r.eventId : events.find(e => String(e.id || e._id) === String(r.eventId?._id || r.eventId))).filter(Boolean);
   
   const approvedEvents = events.filter(e => e.status === 'approved')
   const recommendations = getRecommendedEvents(approvedEvents, registeredEvents)
@@ -217,7 +229,7 @@ export default function StudentDashboard() {
                     key={event.id}
                     event={event}
                     onRegister={handleRegister}
-                    isRegistered={registeredEvents.includes(event.id)}
+                    isRegistered={registeredEvents.some(re => String(re.id || re._id) === String(event.id || event._id))}
                   />
                 ))}
               </div>

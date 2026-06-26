@@ -16,7 +16,7 @@ export default function ParticipantsModal({ event, onClose }) {
   const individualRegs = eventRegistrations?.filter(r => r.participationType === 'Individual') || []
   const teamRegs = eventRegistrations?.filter(r => r.participationType === 'Team') || []
 
-  const isTeamEvent = event?.category === 'Hackathon' || teamRegs.length > 0 || event?.participationType === 'Team'
+  const isTeamEvent = event?.maxTeamSize > 1 || event?.participationType === 'Team'
 
   const downloadCSV = (type) => {
     let csvContent = "data:text/csv;charset=utf-8,";

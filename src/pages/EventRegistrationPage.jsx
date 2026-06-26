@@ -88,6 +88,9 @@ export default function EventRegistrationPage() {
   const isApproved = event.status === 'approved'
   const isPastDeadline = new Date(`${event.registrationDeadlineDate}T${event.registrationDeadlineTime}`) < new Date()
 
+  const isIndividualHackathon = event.teamSizeMin === 1 && event.maxTeamSize === 1;
+  const isTeamHackathon = event.maxTeamSize > 1;
+
   // Find user's team for this event
   const myTeam = teamRequests?.find(tr => {
     const isOwner = String(tr.createdBy) === String(user?.id || user?._id);
@@ -99,7 +102,18 @@ export default function EventRegistrationPage() {
   const currentTeamSize = myTeam ? 1 + (myTeam.currentMembers?.length || 0) : 0;
   const isTeamSizeValid = myTeam && currentTeamSize >= (event.teamSizeMin || 1) && currentTeamSize <= (event.maxTeamSize || 99);
   
-  const isRegisteredBackend = registrations.some(r => String(r.eventId?._id || r.eventId) === String(event?.id || event?._id));
+  const isRegisteredBackend = registrations.some(r => {
+    if (String(r.eventId?._id || r.eventId) !== String(event?.id || event?._id)) return false;
+    if (r.participationType === 'Individual') {
+      return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
+    }
+    if (r.participationType === 'Team' && r.teamId) {
+      const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
+      const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+      return isLead || isMember;
+    }
+    return false;
+  });
 
   const handleIndividualSubmit = async (e) => {
     e.preventDefault()
@@ -325,9 +339,9 @@ export default function EventRegistrationPage() {
           {/* Event Details */}
           <div className="md:col-span-2 bg-white rounded-xl shadow-sm border p-6 h-fit sticky top-24">
             <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 ${
-              event.participationType === 'Team' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+              isTeamHackathon ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
             }`}>
-              {event.participationType || 'Individual'} Registration
+              {isTeamHackathon ? 'Team' : 'Individual'} Registration
             </span>
             
             <h2 className="text-2xl font-bold text-gray-900 mb-4 leading-tight">{event.title}</h2>
@@ -347,7 +361,7 @@ export default function EventRegistrationPage() {
                   <p className="text-xs text-gray-500">{event.mode || 'Offline'}</p>
                 </div>
               </div>
-              {event.participationType === 'Team' && (
+              {isTeamHackathon && (
                 <div className="flex items-center gap-3 text-gray-600">
                   <div className="p-2 bg-gray-50 rounded-lg text-primary-600"><Users size={20} /></div>
                   <div>
@@ -377,7 +391,7 @@ export default function EventRegistrationPage() {
                 </div>
               )}
 
-              {event.participationType !== 'Team' ? (
+              {isIndividualHackathon ? (
                 <>
                   <h2 className="text-2xl font-bold mb-6 text-gray-900">Applicant Details</h2>
                   <form onSubmit={handleIndividualSubmit} className="space-y-6">

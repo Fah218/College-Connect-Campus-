@@ -80,7 +80,18 @@ export default function HackathonDetails() {
 
 
   const { registrations } = useRegistrationStore()
-  const isRegisteredBackend = registrations.some(r => String(r.eventId?._id || r.eventId) === String(h.id))
+  const isRegisteredBackend = registrations.some(r => {
+    if (String(r.eventId?._id || r.eventId) !== String(h.id)) return false;
+    if (r.participationType === 'Individual') {
+      return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
+    }
+    if (r.participationType === 'Team' && r.teamId) {
+      const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
+      const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+      return isLead || isMember;
+    }
+    return false;
+  })
 
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
