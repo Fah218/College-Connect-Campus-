@@ -121,8 +121,8 @@ export const registerForEvent = async (req, res) => {
 
       await newRegistration.save();
 
-      // Lock the team so it no longer accepts applications
-      team.status = 'closed';
+      // Lock the team so it no longer accepts applications and mark it as registered
+      team.status = 'registered';
       await team.save();
 
       // Increment attendees by team size

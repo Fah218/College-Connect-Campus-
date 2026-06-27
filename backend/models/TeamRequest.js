@@ -20,8 +20,12 @@ const teamRequestSchema = new mongoose.Schema({
     required: true
   },
   rolesNeeded: [{
-    type: String
+    type: mongoose.Schema.Types.Mixed
   }],
+  preferredExperienceLevel: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced']
+  },
   requiredSkills: [{
     type: String
   }],
@@ -34,7 +38,7 @@ const teamRequestSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ["open", "full", "closed"],
+    enum: ["open", "recruiting", "team_formed", "registered", "full", "closed"],
     default: "open"
   }
 }, { timestamps: true });

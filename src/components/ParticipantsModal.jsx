@@ -239,11 +239,17 @@ export default function ParticipantsModal({ event, onClose }) {
 
               <div>
                 <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Lead</h4>
-                <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-100">
-                  <span className="font-medium text-primary-900">{selectedTeam.teamId?.createdBy?.name || 'N/A'}</span>
+                <div className="flex flex-col gap-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-primary-900">{selectedTeam.teamId?.createdBy?.name || 'N/A'}</span>
+                    <div className="flex items-center gap-2 text-primary-700 text-sm">
+                      <Mail size={14} />
+                      {selectedTeam.teamId?.createdBy?.email || 'N/A'}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2 text-primary-700 text-sm">
-                    <Mail size={14} />
-                    {selectedTeam.teamId?.createdBy?.email || 'N/A'}
+                    <Phone size={14} />
+                    {selectedTeam.teamId?.createdBy?.phone ? selectedTeam.teamId.createdBy.phone : 'Phone: —'}
                   </div>
                 </div>
               </div>
@@ -251,13 +257,34 @@ export default function ParticipantsModal({ event, onClose }) {
               <div>
                 <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Members</h4>
                 {selectedTeam.teamId?.currentMembers && selectedTeam.teamId.currentMembers.length > 0 ? (
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {selectedTeam.teamId.currentMembers.map((m, idx) => (
-                      <li key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <span className="font-medium text-gray-800">{m.name || 'N/A'}</span>
-                        <div className="flex items-center gap-2 text-gray-600 text-sm">
-                          <Mail size={14} />
-                          {m.email || 'N/A'}
+                      <li key={idx} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-800">{m.name || 'N/A'}</span>
+                            {m.joinedVia && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${m.joinedVia === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
+                                {m.joinedVia}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <Mail size={14} />
+                            {m.email || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-gray-500 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <Phone size={14} />
+                            {m.phone ? m.phone : 'Phone: —'}
+                          </div>
+                          {(m.department || m.year) && (
+                            <div className="flex items-center gap-1.5">
+                              <Building size={14} />
+                              {m.department || '—'} {m.year ? `(${m.year})` : ''}
+                            </div>
+                          )}
                         </div>
                       </li>
                     ))}

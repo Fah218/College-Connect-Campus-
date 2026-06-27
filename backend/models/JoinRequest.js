@@ -19,6 +19,18 @@ const joinRequestSchema = new mongoose.Schema({
   applicantName: {
     type: String
   },
+  applicantEmail: {
+    type: String
+  },
+  applicantPhone: {
+    type: String
+  },
+  department: {
+    type: String
+  },
+  year: {
+    type: String
+  },
   applicantSkills: [{
     type: String
   }],

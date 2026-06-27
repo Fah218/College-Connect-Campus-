@@ -159,6 +159,37 @@ export const useHackathonStore = create(
         }
       },
 
+      updateTeamRequest: async (teamRequestId, data) => {
+        try {
+          const response = await axios.put(`http://localhost:5001/api/teams/request/${teamRequestId}`, data);
+          const updatedDbReq = response.data.data;
+          
+          set(state => ({
+            teamRequests: state.teamRequests.map(req => 
+              (req._id === teamRequestId || req.id === teamRequestId)
+                ? { ...req, ...data, status: updatedDbReq.status }
+                : req
+            )
+          }));
+          return response.data;
+        } catch (error) {
+          console.error("Failed to update team request", error);
+          throw error;
+        }
+      },
+
+      deleteTeamRequest: async (teamRequestId) => {
+        try {
+          await axios.delete(`http://localhost:5001/api/teams/request/${teamRequestId}`);
+          set(state => ({
+            teamRequests: state.teamRequests.filter(req => req._id !== teamRequestId && req.id !== teamRequestId)
+          }));
+        } catch (error) {
+          console.error("Failed to delete team request", error);
+          throw error;
+        }
+      },
+
       /** User B: Send a join request to a team */
       sendJoinRequest: async (teamRequestId, sender, message, details = {}) => {
         const teamReq = get().teamRequests.find(r => r._id === teamRequestId || r.id === teamRequestId)

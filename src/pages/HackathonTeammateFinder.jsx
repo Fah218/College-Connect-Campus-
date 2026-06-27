@@ -5,10 +5,25 @@ import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
-import { Trophy, ArrowLeft, Bell, Search, Filter, X } from 'lucide-react'
+import { Trophy, ArrowLeft, Bell, Search, Filter, X, Lock, Edit2, Trash2 } from 'lucide-react'
 
-const ROLES = ['Frontend','Backend','Full-Stack','ML Engineer','Designer','DevOps','Mobile Dev']
-const SKILLS = ['React','Node.js','Python','TensorFlow','Figma','MongoDB','AWS','Flutter','Django','UI/UX']
+const ROLES = [
+  'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile App Developer',
+  'UI/UX Designer', 'AI/ML Engineer', 'Data Scientist', 'Data Engineer', 'DevOps Engineer',
+  'Cloud Engineer', 'Cybersecurity Engineer', 'Blockchain Developer', 'IoT Developer',
+  'Embedded Systems Engineer', 'QA / Testing', 'Product Manager', 'Project Coordinator',
+  'Researcher', 'Other (Custom)'
+]
+
+const SKILLS = [
+  'React', 'Next.js', 'Angular', 'Vue.js', 'HTML', 'CSS', 'Tailwind CSS', 'Bootstrap',
+  'JavaScript', 'TypeScript', 'Node.js', 'Express.js', 'MongoDB', 'MySQL', 'PostgreSQL',
+  'Firebase', 'Python', 'Java', 'C++', 'TensorFlow', 'PyTorch', 'OpenCV', 'LangChain',
+  'OpenAI API', 'Gemini API', 'Hugging Face', 'Docker', 'Kubernetes', 'AWS', 'Azure',
+  'GCP', 'Git', 'GitHub', 'Linux', 'Flutter', 'React Native', 'Kotlin', 'Swift', 'Figma',
+  'UI/UX', 'REST API', 'GraphQL', 'Blockchain', 'Solidity', 'Cybersecurity',
+  'Machine Learning', 'Generative AI', 'RAG', 'AI Agents', 'Prompt Engineering', 'Other (Custom)'
+]
 
 export default function HackathonTeammateFinder() {
   const { id } = useParams()
@@ -74,6 +89,17 @@ export default function HackathonTeammateFinder() {
     setJoinForm(p => ({ ...p, [reqId]: false }))
   }
 
+  const handleDeleteTeamRequest = async (teamReqId) => {
+    if (window.confirm('Are you sure you want to delete this team request?')) {
+      try {
+        await store.deleteTeamRequest(teamReqId);
+        addNotification({ title: 'Deleted', message: 'Team request deleted successfully', priority: 'medium' });
+      } catch (err) {
+        addNotification({ title: 'Error', message: err.response?.data?.message || err.message, priority: 'high' });
+      }
+    }
+  }
+
   const [joinForm, setJoinForm] = useState({})
   const [joinDetails, setJoinDetails] = useState({})
 
@@ -136,8 +162,32 @@ export default function HackathonTeammateFinder() {
                     <h2 className="text-lg font-bold text-gray-900">My Team</h2>
                     <p className="text-sm text-gray-500">{myTeam.teamName || 'Untitled Team'}</p>
                   </div>
-                  <div className={`px-2 py-1 text-white text-[10px] rounded font-bold uppercase ${myTeam.status === 'full' ? 'bg-red-500' : 'bg-green-500'}`}>
-                    {myTeam.status === 'full' ? 'Full' : 'Recruiting'}
+                  <div className="flex items-center gap-2">
+                    {isTeamOwner && myTeam.status === 'open' ? (
+                      <div className="flex gap-1 text-gray-500">
+                        <button onClick={() => alert('Editing will be supported in the future.')} className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition" title="Edit Team Request">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteTeamRequest(myTeam._id || myTeam.id)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded transition" title="Delete Team Request">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ) : isTeamOwner && myTeam.status !== 'open' ? (
+                      <div className="flex items-center gap-1 text-[10px] text-gray-600 bg-gray-100 px-2 py-1 rounded font-medium" title="Recruitment Locked">
+                        <Lock size={10} />
+                        Locked
+                      </div>
+                    ) : null}
+                    <div className={`px-2 py-1 text-white text-[10px] rounded font-bold uppercase ${
+                      myTeam.status === 'full' ? 'bg-red-500' :
+                      myTeam.status === 'registered' ? 'bg-indigo-500' :
+                      myTeam.status === 'team_formed' ? 'bg-purple-500' :
+                      myTeam.status === 'recruiting' ? 'bg-blue-500' :
+                      myTeam.status === 'closed' ? 'bg-gray-500' :
+                      'bg-green-500'
+                    }`}>
+                      {myTeam.status === 'team_formed' ? 'Formed' : myTeam.status}
+                    </div>
                   </div>
                 </div>
 
@@ -370,6 +420,7 @@ export default function HackathonTeammateFinder() {
 
       {showPostForm && (
         <PostRequestModal
+          hMaxTeamSize={hMaxTeamSize}
           onClose={() => setShowPostForm(false)}
           onSubmit={(data) => {
             store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user.id })
@@ -382,13 +433,21 @@ export default function HackathonTeammateFinder() {
   )
 }
 
-function PostRequestModal({ onClose, onSubmit }) {
+function PostRequestModal({ onClose, onSubmit, hMaxTeamSize }) {
   const [form, setForm] = useState({
     teamName: '',
     description: '',
     requiredRoles: [],
-    requiredSkills: []
+    requiredSkills: [],
+    preferredExperienceLevel: '',
+    teamSizeLimit: hMaxTeamSize || 4
   })
+  
+  const [skillSearch, setSkillSearch] = useState('')
+  const [roleSearch, setRoleSearch] = useState('')
+
+  const availableSlots = form.teamSizeLimit - 1; // 1 slot for lead
+  const requestedMembersCount = form.requiredRoles.reduce((sum, r) => sum + (parseInt(r.count) || 0), 0);
 
   const toggleRole = (role) => {
     setForm(prev => {
@@ -400,10 +459,11 @@ function PostRequestModal({ onClose, onSubmit }) {
     })
   }
 
-  const updateRoleCount = (role, count) => {
+  const updateRoleCount = (role, countStr) => {
+    const count = parseInt(countStr) || 1;
     setForm(prev => ({
       ...prev,
-      requiredRoles: prev.requiredRoles.map(r => r.role === role ? { ...r, count: parseInt(count) || 1 } : r)
+      requiredRoles: prev.requiredRoles.map(r => r.role === role ? { ...r, count } : r)
     }))
   }
 
@@ -416,99 +476,208 @@ function PostRequestModal({ onClose, onSubmit }) {
     }))
   }
 
+  const handleSubmit = () => {
+    if (!form.teamName.trim()) {
+      alert("Team Name is required.");
+      return;
+    }
+    if (form.requiredRoles.length === 0) {
+      alert("Please select at least one role.");
+      return;
+    }
+    if (requestedMembersCount > availableSlots) {
+      alert(`You can request a maximum of ${availableSlots} members based on your team size limit.`);
+      return;
+    }
+    if (!form.description.trim()) {
+      alert("Description is required.");
+      return;
+    }
+    
+    onSubmit({
+      ...form,
+      roles: form.requiredRoles, // map to backend payload expectation if needed
+      skills: form.requiredSkills
+    });
+  }
+
+  const filteredRoles = ROLES.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase()))
+  const filteredSkills = SKILLS.filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()))
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6 border-b pb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Post Team Request</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+      <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-6 border-b shrink-0 bg-gray-50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Post Team Request</h2>
+            <p className="text-sm text-gray-500 mt-1">Define who you need to build something great.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
             <X size={24} className="text-gray-500" />
           </button>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Team Name <span className="text-gray-400 font-normal">(Optional)</span></label>
-            <input
-              type="text"
-              value={form.teamName}
-              onChange={e => setForm({ ...form, teamName: e.target.value })}
-              placeholder="e.g. Code Wizards"
-              className="w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-3">Roles Needed</label>
-            <div className="flex flex-wrap gap-2">
-              {ROLES.map(role => {
-                const active = form.requiredRoles.find(r => r.role === role)
-                return (
-                  <div key={role} className="flex items-center gap-1">
-                    <button
-                      onClick={() => toggleRole(role)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
-                        active ? 'bg-primary-600 text-white border-primary-600 shadow-sm' : 'bg-white text-gray-600 hover:border-primary-400 hover:bg-primary-50'
-                      }`}
-                    >
-                      {role}
-                    </button>
-                    {active && (
-                      <input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={active.count}
-                        onChange={e => updateRoleCount(role, e.target.value)}
-                        className="w-14 px-2 py-2 text-center border rounded-xl text-sm font-bold bg-gray-50 focus:ring-2 focus:ring-primary-500 outline-none"
-                      />
-                    )}
-                  </div>
-                )
-              })}
+        <div className="p-6 overflow-y-auto space-y-8 flex-1">
+          {/* Section 1: Team Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-primary-700 border-b pb-2">1. Team Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Team Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={form.teamName}
+                  onChange={e => setForm({ ...form, teamName: e.target.value })}
+                  placeholder="e.g. Code Wizards"
+                  className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Team Size Limit <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min="2"
+                  max={hMaxTeamSize}
+                  value={form.teamSizeLimit}
+                  onChange={e => setForm({ ...form, teamSizeLimit: Math.min(parseInt(e.target.value) || 2, hMaxTeamSize) })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Max allowed for this event is {hMaxTeamSize}.</p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-3">Skills Needed</label>
-            <div className="flex flex-wrap gap-2">
-              {SKILLS.map(skill => (
-                <button
-                  key={skill}
-                  onClick={() => toggleSkill(skill)}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
-                    form.requiredSkills.includes(skill)
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                      : 'bg-white text-gray-600 hover:border-purple-400 hover:bg-purple-50'
-                  }`}
-                >
-                  {skill}
-                </button>
-              ))}
+          {/* Section 2: Recruitment Requirements */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-primary-700 border-b pb-2">2. Recruitment Requirements</h3>
+            
+            <div className="bg-blue-50 p-3 rounded-lg flex items-center justify-between text-sm">
+              <span className="font-medium text-blue-900">Total members requested: <strong>{requestedMembersCount}</strong></span>
+              <span className="font-medium text-blue-900">Available slots: <strong>{availableSlots}</strong></span>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Roles Needed <span className="text-red-500">*</span></label>
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search roles..." 
+                  value={roleSearch}
+                  onChange={e => setRoleSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                />
+              </div>
+              <div className="border rounded-xl p-3 max-h-48 overflow-y-auto bg-gray-50 grid grid-cols-1 md:grid-cols-2 gap-2">
+                {filteredRoles.map(role => {
+                  const active = form.requiredRoles.find(r => r.role === role)
+                  return (
+                    <div key={role} className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${active ? 'bg-white border-primary-500 shadow-sm' : 'border-transparent hover:bg-gray-100'}`}>
+                      <label className="flex items-center gap-2 cursor-pointer flex-1">
+                        <input 
+                          type="checkbox" 
+                          checked={!!active}
+                          onChange={() => toggleRole(role)}
+                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{role}</span>
+                      </label>
+                      {active && (
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className="text-xs text-gray-500">Count:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={availableSlots}
+                            value={active.count}
+                            onChange={e => updateRoleCount(role, e.target.value)}
+                            className="w-12 px-1 py-1 text-center border rounded text-sm font-bold focus:ring-2 focus:ring-primary-500 outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Skills Needed <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search skills..." 
+                  value={skillSearch}
+                  onChange={e => setSkillSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                />
+              </div>
+              
+              {form.requiredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                  {form.requiredSkills.map(skill => (
+                    <span key={skill} className="inline-flex items-center gap-1 px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                      {skill}
+                      <button onClick={() => toggleSkill(skill)} className="hover:text-purple-200"><X size={12}/></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                {filteredSkills.filter(s => !form.requiredSkills.includes(s)).map(skill => (
+                  <button
+                    key={skill}
+                    onClick={() => toggleSkill(skill)}
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border bg-white text-gray-600 hover:border-purple-400 hover:bg-purple-50 transition-colors"
+                  >
+                    + {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Preferred Experience Level <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <select
+                value={form.preferredExperienceLevel}
+                onChange={e => setForm({ ...form, preferredExperienceLevel: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
+              >
+                <option value="">Any Level</option>
+                <option value="Beginner">Beginner (1st/2nd Year)</option>
+                <option value="Intermediate">Intermediate (3rd Year)</option>
+                <option value="Advanced">Advanced (4th Year / Pros)</option>
+              </select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Description <span className="text-red-500">*</span></label>
-            <textarea
-              value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })}
-              placeholder="Tell us what you're building and who you're looking for..."
-              className="w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none h-32 resize-none text-gray-900"
-              required
-            />
+          {/* Section 3: Description */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-primary-700 border-b pb-2">3. Description</h3>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Project Details & Responsibilities <span className="text-red-500">*</span></label>
+              <textarea
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+                placeholder="What are you building? What will the new members do? What are the expectations?"
+                className="w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none h-32 resize-none text-gray-900"
+                required
+              />
+            </div>
           </div>
+        </div>
 
-          <div className="pt-4">
-            <button
-              onClick={() => {
-                if (form.description.trim()) onSubmit(form)
-              }}
-              className="w-full py-4 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all active:scale-[0.98]"
-            >
-              Submit Request
-            </button>
-          </div>
+        <div className="p-6 border-t shrink-0 bg-gray-50">
+          <button
+            onClick={handleSubmit}
+            className="w-full py-3.5 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all active:scale-[0.98]"
+          >
+            Post Team Request
+          </button>
         </div>
       </div>
     </div>
