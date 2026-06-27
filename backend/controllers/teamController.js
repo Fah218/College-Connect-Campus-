@@ -48,7 +48,7 @@ export const createTeamRequest = async (req, res) => {
 export const updateTeamRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, rolesNeeded, requiredSkills, preferredExperienceLevel, teamSizeLimit, currentMembers } = req.body;
+    const { title, teamName, description, rolesNeeded, roles, requiredSkills, skills, preferredExperienceLevel, teamSizeLimit, currentMembers } = req.body;
     
     const teamRequest = await TeamRequest.findById(id);
     if (!teamRequest) {
@@ -59,10 +59,14 @@ export const updateTeamRequest = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Cannot edit team request once recruitment has started.' });
     }
     
-    if (title !== undefined) teamRequest.title = title;
+    const finalTitle = title !== undefined ? title : teamName;
+    const finalRoles = rolesNeeded !== undefined ? rolesNeeded : roles;
+    const finalSkills = requiredSkills !== undefined ? requiredSkills : skills;
+
+    if (finalTitle !== undefined) teamRequest.title = finalTitle;
     if (description !== undefined) teamRequest.description = description;
-    if (rolesNeeded !== undefined) teamRequest.rolesNeeded = rolesNeeded;
-    if (requiredSkills !== undefined) teamRequest.requiredSkills = requiredSkills;
+    if (finalRoles !== undefined) teamRequest.rolesNeeded = finalRoles;
+    if (finalSkills !== undefined) teamRequest.requiredSkills = finalSkills;
     if (preferredExperienceLevel !== undefined) teamRequest.preferredExperienceLevel = preferredExperienceLevel;
     if (teamSizeLimit !== undefined) teamRequest.teamSizeLimit = teamSizeLimit;
     if (currentMembers !== undefined) teamRequest.currentMembers = currentMembers;
@@ -94,6 +98,7 @@ export const deleteTeamRequest = async (req, res) => {
     }
     
     await TeamRequest.findByIdAndDelete(id);
+    await JoinRequest.deleteMany({ teamRequestId: id });
     
     res.status(200).json({
       success: true,
@@ -127,7 +132,7 @@ export const getTeamRequests = async (req, res) => {
 
 export const createJoinRequest = async (req, res) => {
   try {
-    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
+    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, resumeBase64, message, status } = req.body;
     
     // Check if duplicate join request
     const existingJoinRequest = await JoinRequest.findOne({ teamRequestId, applicantId });
@@ -162,6 +167,7 @@ export const createJoinRequest = async (req, res) => {
       githubLink,
       portfolioLink,
       linkedinLink,
+      resumeBase64,
       message,
       status: status || 'pending'
     });
@@ -285,7 +291,6 @@ export const updateJoinRequestStatus = async (req, res) => {
             _id: { $ne: joinRequest._id },
             status: 'pending'
           }, { $set: { status: 'rejected' } });
-        }
         }
       }
     } else if (status === 'rejected') {

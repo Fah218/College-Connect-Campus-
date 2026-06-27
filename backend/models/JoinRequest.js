@@ -44,6 +44,10 @@ const joinRequestSchema = new mongoose.Schema({
     type: String
   },
   message: {
+    type: String,
+    required: true
+  },
+  resumeBase64: {
     type: String
   },
   status: {

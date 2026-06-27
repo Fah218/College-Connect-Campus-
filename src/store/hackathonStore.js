@@ -211,6 +211,7 @@ export const useHackathonStore = create(
             githubLink: details.github || '',
             portfolioLink: details.portfolio || '',
             linkedinLink: details.linkedin || '',
+            resumeBase64: details.resumeBase64 || '',
             message: message || 'I would like to join your team.'
           };
           
@@ -225,6 +226,7 @@ export const useHackathonStore = create(
             githubLink:    payload.githubLink,
             portfolioLink: payload.portfolioLink,
             linkedinLink:  payload.linkedinLink,
+            resumeBase64:  payload.resumeBase64,
             message:       payload.message,
             status:        'pending',
             createdAt:     dbReq.createdAt

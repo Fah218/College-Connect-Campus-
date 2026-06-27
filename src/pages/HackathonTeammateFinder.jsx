@@ -33,6 +33,7 @@ export default function HackathonTeammateFinder() {
   const { user, isAuthenticated, addNotification } = useAuthStore()
 
   const [showPostForm, setShowPostForm]       = useState(false)
+  const [editingTeamRequest, setEditingTeamRequest] = useState(null)
   const [showInbox, setShowInbox]             = useState(true)
   const [joinMsg, setJoinMsg]                 = useState({})
   
@@ -165,7 +166,7 @@ export default function HackathonTeammateFinder() {
                   <div className="flex items-center gap-2">
                     {isTeamOwner && myTeam.status === 'open' ? (
                       <div className="flex gap-1 text-gray-500">
-                        <button onClick={() => alert('Editing will be supported in the future.')} className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition" title="Edit Team Request">
+                        <button onClick={() => setEditingTeamRequest(myTeam)} className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition" title="Edit Team Request">
                           <Edit2 size={16} />
                         </button>
                         <button onClick={() => handleDeleteTeamRequest(myTeam._id || myTeam.id)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded transition" title="Delete Team Request">
@@ -422,10 +423,31 @@ export default function HackathonTeammateFinder() {
         <PostRequestModal
           hMaxTeamSize={hMaxTeamSize}
           onClose={() => setShowPostForm(false)}
-          onSubmit={(data) => {
-            store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user.id })
-            addNotification({ title: 'Request Posted', message: 'Your team request is live!', priority: 'medium' })
-            setShowPostForm(false)
+          onSubmit={async (data) => {
+            try {
+              await store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user.id });
+              addNotification({ title: 'Request Posted', message: 'Your team request is live!', priority: 'medium' });
+              setShowPostForm(false);
+            } catch (err) {
+              addNotification({ title: 'Error', message: err.message, priority: 'high' });
+            }
+          }}
+        />
+      )}
+
+      {editingTeamRequest && (
+        <PostRequestModal
+          initialData={editingTeamRequest}
+          hMaxTeamSize={hMaxTeamSize}
+          onClose={() => setEditingTeamRequest(null)}
+          onSubmit={async (data) => {
+            try {
+              await store.updateTeamRequest(editingTeamRequest._id || editingTeamRequest.id, data);
+              addNotification({ title: 'Request Updated', message: 'Your team request has been updated!', priority: 'medium' });
+              setEditingTeamRequest(null);
+            } catch (err) {
+              addNotification({ title: 'Error', message: err.response?.data?.message || err.message, priority: 'high' });
+            }
           }}
         />
       )}
@@ -433,14 +455,14 @@ export default function HackathonTeammateFinder() {
   )
 }
 
-function PostRequestModal({ onClose, onSubmit, hMaxTeamSize }) {
+function PostRequestModal({ onClose, onSubmit, hMaxTeamSize, initialData }) {
   const [form, setForm] = useState({
-    teamName: '',
-    description: '',
-    requiredRoles: [],
-    requiredSkills: [],
-    preferredExperienceLevel: '',
-    teamSizeLimit: hMaxTeamSize || 4
+    teamName: initialData?.teamName || initialData?.title || '',
+    description: initialData?.description || '',
+    requiredRoles: initialData?.rolesNeeded || initialData?.roles || [],
+    requiredSkills: initialData?.requiredSkills || initialData?.skills || [],
+    preferredExperienceLevel: initialData?.preferredExperienceLevel || '',
+    teamSizeLimit: initialData?.teamSizeLimit || hMaxTeamSize || 4
   })
   
   const [skillSearch, setSkillSearch] = useState('')
@@ -509,7 +531,7 @@ function PostRequestModal({ onClose, onSubmit, hMaxTeamSize }) {
       <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b shrink-0 bg-gray-50">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Post Team Request</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{initialData ? 'Edit Team Request' : 'Post Team Request'}</h2>
             <p className="text-sm text-gray-500 mt-1">Define who you need to build something great.</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
@@ -534,17 +556,15 @@ function PostRequestModal({ onClose, onSubmit, hMaxTeamSize }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Team Size Limit <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Team Size Limit <span className="text-gray-400 font-normal">(Auto-filled)</span></label>
                 <input
                   type="number"
-                  min="2"
-                  max={hMaxTeamSize}
                   value={form.teamSizeLimit}
-                  onChange={e => setForm({ ...form, teamSizeLimit: Math.min(parseInt(e.target.value) || 2, hMaxTeamSize) })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
+                  disabled
+                  className="w-full px-4 py-2.5 bg-gray-100 border rounded-xl text-gray-500 cursor-not-allowed"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Max allowed for this event is {hMaxTeamSize}.</p>
+                <p className="text-xs text-gray-500 mt-1">Set by the Club Head for this event.</p>
               </div>
             </div>
           </div>
@@ -676,7 +696,7 @@ function PostRequestModal({ onClose, onSubmit, hMaxTeamSize }) {
             onClick={handleSubmit}
             className="w-full py-3.5 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all active:scale-[0.98]"
           >
-            Post Team Request
+            {initialData ? 'Update Request' : 'Post Team Request'}
           </button>
         </div>
       </div>
