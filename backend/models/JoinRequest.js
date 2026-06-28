@@ -47,9 +47,6 @@ const joinRequestSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  resumeBase64: {
-    type: String
-  },
   status: {
     type: String,
     enum: ["pending", "accepted", "rejected"],

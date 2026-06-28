@@ -21,9 +21,22 @@ const registrationSchema = new mongoose.Schema({
   teamId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'TeamRequest',
-    required: function() {
-      return this.participationType === 'Team';
-    }
+    required: false
+  },
+  teamDetails: {
+    teamName: String,
+    members: [{
+      name: String,
+      email: String,
+      phone: String,
+      department: String,
+      year: String,
+      role: {
+        type: String,
+        enum: ['Leader', 'Member'],
+        default: 'Member'
+      }
+    }]
   },
   formData: {
     name: String,

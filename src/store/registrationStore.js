@@ -59,15 +59,19 @@ export const useRegistrationStore = create(
         }
       },
 
-      registerTeam: async (eventId, teamId, studentId) => {
+      registerTeam: async (eventId, teamId, studentId, teamDetails = null) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await axios.post('http://localhost:5001/api/registrations', {
+          const payload = {
             eventId,
             participationType: 'Team',
-            teamId,
             studentId
-          });
+          };
+          
+          if (teamId) payload.teamId = teamId;
+          if (teamDetails) payload.teamDetails = teamDetails;
+
+          const response = await axios.post('http://localhost:5001/api/registrations', payload);
 
           set((state) => ({
             registrations: [...state.registrations, response.data.registration],

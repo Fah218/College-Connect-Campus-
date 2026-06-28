@@ -119,7 +119,7 @@ export default function HackathonTeammateFinder() {
   }
   
   // Filter Open Requests
-  const activeRequests = allRequests.filter(req => req.status === 'open' && ((req.currentMembers || []).length + 1) < (req.teamSizeLimit || hMaxTeamSize))
+  const activeRequests = allRequests.filter(req => (req.status === 'open' || req.status === 'recruiting' || req.status === 'team_formed') && ((req.currentMembers || []).length + 1) < (req.teamSizeLimit || hMaxTeamSize))
 
   // Apply User Filters
   const filteredRequests = activeRequests.filter(req => {
@@ -229,33 +229,54 @@ export default function HackathonTeammateFinder() {
                 <h3 className="font-bold text-yellow-800 mb-4 flex items-center gap-2 text-lg"><Bell size={20} /> Inbox ({pendingInbox.length})</h3>
                 <div className="space-y-4">
                   {pendingInbox.map(jr => (
-                    <div key={jr._id} className="bg-white border rounded-xl p-4 shadow-sm">
+                    <div key={jr._id} className="bg-white border rounded-xl p-5 shadow-sm">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <p className="font-bold text-gray-900">{jr.sender?.name}</p>
-                          <p className="text-sm text-gray-600 italic mt-1">"{jr.message || 'No message'}"</p>
+                          <p className="font-bold text-gray-900 text-lg">{jr.sender?.name || 'Unknown User'}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {jr.sender?.department || 'Department Not Provided'} 
+                            {jr.sender?.year ? ` • ${jr.sender.year}` : ' • Year Not Provided'}
+                          </p>
+                        </div>
+                        <div className="text-xs text-gray-400 font-medium">
+                          {new Date(jr.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                       
-                      <div className="bg-gray-50 rounded-lg p-3 text-sm border mb-4">
-                        <div className="space-y-2 mb-3">
-                          {jr.githubLink && <div className="truncate"><span className="font-semibold text-gray-500 mr-2">GitHub:</span><a href={jr.githubLink} target="_blank" className="text-primary-600 hover:underline">{jr.githubLink}</a></div>}
-                          {jr.portfolioLink && <div className="truncate"><span className="font-semibold text-gray-500 mr-2">Portfolio:</span><a href={jr.portfolioLink} target="_blank" className="text-primary-600 hover:underline">{jr.portfolioLink}</a></div>}
-                          {jr.linkedinLink && <div className="truncate"><span className="font-semibold text-gray-500 mr-2">LinkedIn:</span><a href={jr.linkedinLink} target="_blank" className="text-primary-600 hover:underline">{jr.linkedinLink}</a></div>}
+                      <div className="mb-4">
+                        <p className="text-sm font-bold text-gray-700 mb-1">Message to Lead:</p>
+                        <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border italic">"{jr.message || 'No message provided'}"</p>
+                      </div>
+                      
+                      <div className="bg-blue-50/50 rounded-lg p-4 text-sm border mb-4">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Applicant Profile</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                          <div className="truncate">
+                            <span className="font-semibold text-gray-600 mr-2">GitHub:</span>
+                            {jr.githubLink ? <a href={jr.githubLink} target="_blank" className="text-primary-600 hover:underline">{jr.githubLink}</a> : <span className="text-gray-400 italic">Not Provided</span>}
+                          </div>
+                          <div className="truncate">
+                            <span className="font-semibold text-gray-600 mr-2">Portfolio:</span>
+                            {jr.portfolioLink ? <a href={jr.portfolioLink} target="_blank" className="text-primary-600 hover:underline">{jr.portfolioLink}</a> : <span className="text-gray-400 italic">Not Provided</span>}
+                          </div>
+                          <div className="truncate">
+                            <span className="font-semibold text-gray-600 mr-2">LinkedIn:</span>
+                            {jr.linkedinLink ? <a href={jr.linkedinLink} target="_blank" className="text-primary-600 hover:underline">{jr.linkedinLink}</a> : <span className="text-gray-400 italic">Not Provided</span>}
+                          </div>
                         </div>
                         {jr.sender?.skills?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                            <span className="font-semibold text-gray-500 mr-1 text-xs">Skills:</span>
+                          <div className="flex flex-wrap gap-1.5 pt-3 border-t border-blue-100">
+                            <span className="font-semibold text-gray-600 mr-1 text-xs flex items-center">Skills:</span>
                             {jr.sender.skills.map((s, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">{s}</span>
+                              <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-bold border border-blue-200">{s}</span>
                             ))}
                           </div>
                         )}
                       </div>
 
-                      <div className="flex gap-3">
-                        <button onClick={() => store.acceptJoinRequest?.(jr._id)} className="flex-1 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700">Accept</button>
-                        <button onClick={() => store.rejectJoinRequest?.(jr._id)} className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-lg border border-red-200 hover:bg-red-100">Reject</button>
+                      <div className="flex gap-3 pt-2">
+                        <button onClick={() => store.acceptJoinRequest?.(jr._id)} className="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm">Accept Applicant</button>
+                        <button onClick={() => store.rejectJoinRequest?.(jr._id)} className="flex-1 py-2.5 bg-white text-red-600 text-sm font-bold rounded-lg border-2 border-red-100 hover:bg-red-50 hover:border-red-200 transition-colors">Reject</button>
                       </div>
                     </div>
                   ))}
@@ -379,15 +400,29 @@ export default function HackathonTeammateFinder() {
                          {!joinForm[req._id] ? (
                            <button onClick={() => toggleJoinForm(req._id)} className="px-6 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-colors shadow-sm">Request to Join</button>
                          ) : (
-                           <div className="bg-gray-50 border rounded-xl p-5 w-full sm:w-[400px]">
+                           <div className="bg-gray-50 border rounded-xl p-5 w-full sm:w-[450px]">
                              <div className="flex justify-between items-center mb-4">
                                <h4 className="font-bold text-gray-900">Complete Application</h4>
                                <button onClick={() => toggleJoinForm(req._id)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
                              </div>
                              
+                             <div className="mb-4 p-3 bg-white border rounded-lg">
+                               <p className="text-xs text-gray-500 font-medium">Applying as</p>
+                               <p className="text-sm font-bold text-gray-900">{user?.name || 'User'}</p>
+                               {user?.department && <p className="text-xs text-gray-600">{user.department}</p>}
+                             </div>
+
                              <div className="space-y-3 mb-4">
                                <div>
-                                 <label className="block text-xs font-bold text-gray-600 mb-1">GitHub URL <span className="text-red-500">*</span></label>
+                                 <label className="block text-xs font-bold text-gray-600 mb-1">Message to Lead <span className="text-red-500">*</span></label>
+                                 <textarea value={joinMsg[req._id] || ''} onChange={e => setJoinMsg(p => ({...p, [req._id]: e.target.value}))} placeholder="Why are you a good fit?" rows={2} className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none bg-white" required />
+                               </div>
+                               
+                               <div className="bg-blue-50 p-2 rounded text-xs text-blue-800 font-medium mb-1 border border-blue-100">
+                                 Please provide at least one profile link:
+                               </div>
+                               <div>
+                                 <label className="block text-xs font-bold text-gray-600 mb-1">GitHub URL</label>
                                  <input value={joinDetails[req._id]?.github || ''} onChange={e => updateJoinDetails(req._id, 'github', e.target.value)} placeholder="https://github.com/..." className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-white" />
                                </div>
                                <div>
@@ -398,13 +433,13 @@ export default function HackathonTeammateFinder() {
                                  <label className="block text-xs font-bold text-gray-600 mb-1">LinkedIn URL</label>
                                  <input value={joinDetails[req._id]?.linkedin || ''} onChange={e => updateJoinDetails(req._id, 'linkedin', e.target.value)} placeholder="https://linkedin.com/in/..." className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-white" />
                                </div>
-                               <div>
-                                 <label className="block text-xs font-bold text-gray-600 mb-1">Message to Lead</label>
-                                 <textarea value={joinMsg[req._id] || ''} onChange={e => setJoinMsg(p => ({...p, [req._id]: e.target.value}))} placeholder="Why are you a good fit?" rows={2} className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none bg-white" />
-                               </div>
                              </div>
                              
-                             <button onClick={() => handleSendJoin(req._id, joinDetails[req._id])} disabled={!joinDetails[req._id]?.github} className="w-full py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:bg-gray-400 shadow-sm transition-colors">
+                             <button 
+                               onClick={() => handleSendJoin(req._id, joinDetails[req._id])} 
+                               disabled={!joinMsg[req._id]?.trim() || !(joinDetails[req._id]?.github?.trim() || joinDetails[req._id]?.portfolio?.trim() || joinDetails[req._id]?.linkedin?.trim())} 
+                               className="w-full py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:bg-gray-400 shadow-sm transition-colors"
+                             >
                                Submit Application
                              </button>
                            </div>

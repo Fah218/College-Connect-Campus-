@@ -22,7 +22,7 @@ export const createTeamRequest = async (req, res) => {
       description,
       rolesNeeded: rolesNeeded || req.body.roles || [], // fallback for existing frontend payload
       requiredSkills: requiredSkills || req.body.skills || [], // fallback for existing frontend payload
-      preferredExperienceLevel,
+      preferredExperienceLevel: preferredExperienceLevel || undefined,
       teamSizeLimit: teamSizeLimit || 4,
       currentMembers: currentMembers || [],
       status: status || 'open'
@@ -67,7 +67,13 @@ export const updateTeamRequest = async (req, res) => {
     if (description !== undefined) teamRequest.description = description;
     if (finalRoles !== undefined) teamRequest.rolesNeeded = finalRoles;
     if (finalSkills !== undefined) teamRequest.requiredSkills = finalSkills;
-    if (preferredExperienceLevel !== undefined) teamRequest.preferredExperienceLevel = preferredExperienceLevel;
+    if (preferredExperienceLevel !== undefined) {
+      if (preferredExperienceLevel === '') {
+        teamRequest.preferredExperienceLevel = undefined;
+      } else {
+        teamRequest.preferredExperienceLevel = preferredExperienceLevel;
+      }
+    }
     if (teamSizeLimit !== undefined) teamRequest.teamSizeLimit = teamSizeLimit;
     if (currentMembers !== undefined) teamRequest.currentMembers = currentMembers;
     
@@ -132,7 +138,7 @@ export const getTeamRequests = async (req, res) => {
 
 export const createJoinRequest = async (req, res) => {
   try {
-    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, resumeBase64, message, status } = req.body;
+    const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
     
     // Check if duplicate join request
     const existingJoinRequest = await JoinRequest.findOne({ teamRequestId, applicantId });
@@ -167,7 +173,6 @@ export const createJoinRequest = async (req, res) => {
       githubLink,
       portfolioLink,
       linkedinLink,
-      resumeBase64,
       message,
       status: status || 'pending'
     });

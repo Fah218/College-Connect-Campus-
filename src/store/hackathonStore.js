@@ -65,7 +65,13 @@ export const useHackathonStore = create(
             githubLink: jr.githubLink,
             portfolioLink: jr.portfolioLink,
             linkedinLink: jr.linkedinLink,
-            sender: { id: jr.applicantId, name: jr.applicantName, skills: jr.applicantSkills } // map back to sender for UI compatibility
+            sender: { 
+              id: jr.applicantId, 
+              name: jr.applicantName, 
+              skills: jr.applicantSkills,
+              department: jr.department,
+              year: jr.year
+            } // map back to sender for UI compatibility
           }));
 
           const dbTeamRequests = teamRes.data.teamRequests.map(tr => {
@@ -211,7 +217,6 @@ export const useHackathonStore = create(
             githubLink: details.github || '',
             portfolioLink: details.portfolio || '',
             linkedinLink: details.linkedin || '',
-            resumeBase64: details.resumeBase64 || '',
             message: message || 'I would like to join your team.'
           };
           
@@ -226,7 +231,6 @@ export const useHackathonStore = create(
             githubLink:    payload.githubLink,
             portfolioLink: payload.portfolioLink,
             linkedinLink:  payload.linkedinLink,
-            resumeBase64:  payload.resumeBase64,
             message:       payload.message,
             status:        'pending',
             createdAt:     dbReq.createdAt
@@ -275,66 +279,35 @@ export const useHackathonStore = create(
       /** User A: Accept a join request */
       acceptJoinRequest: async (joinRequestId) => {
         try {
+          // get necessary info before backend mutations
+          const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
+          if (!jr) return;
+          
           await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
           
+          // Refetch everything to ensure perfect consistency with MongoDB
+          await get().fetchHackathonData();
+          
           set(state => {
-            const jr = state.joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId))
-            if (!jr) return {}
-
-            const updatedJRs = state.joinRequests.map(j => {
-              if (String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId)) {
-                return { ...j, status: 'accepted' };
-              }
-              // Auto-reject other pending requests from the same user for the same hackathon
-              if (String(j.hackathonId) === String(jr.hackathonId) && 
-                  String(j.sender?.id) === String(jr.sender?.id) && 
-                  j.status === 'pending') {
-                return { ...j, status: 'rejected' };
-              }
-              return j;
-            });
-
-            // add sender to team members
-            const updatedTRs = state.teamRequests.map(tr => {
-              if (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) {
-                const members = tr.currentMembers || [];
-                const isMember = members.some(m => String(m.id) === String(jr.sender?.id));
-                const newMembers = isMember ? members : [...members, jr.sender];
-                
-                // Also check if full
-                const isFull = newMembers.length + 1 >= (tr.teamSizeLimit || 4);
-                
-                return {
-                  ...tr,
-                  currentMembers: newMembers,
-                  status: isFull ? 'full' : tr.status
-                };
-              }
-              return tr;
-            })
-
-            // notify the sender (User B)
-            const senderId = String(jr.sender?.id)
-            const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId))
-            const prevSenderNotifs = state.userNotifications[senderId] || []
+            const senderId = String(jr.sender?.id);
+            const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId));
+            const prevSenderNotifs = state.userNotifications[senderId] || [];
             const newNotif = {
               id:        Date.now().toString() + 'a',
-              text:      `✅ Your request to join "${teamReq?.teamName || 'the team'}" was accepted!`,
+              text:      `✅ Your request to join "${teamReq?.teamName || teamReq?.title || 'the team'}" was accepted!`,
               type:      'accepted',
               read:      false,
               createdAt: new Date().toISOString(),
               meta:      { teamRequestId: jr.teamRequestId, hackathonId: jr.hackathonId }
-            }
+            };
 
             return {
-              joinRequests:      updatedJRs,
-              teamRequests:      updatedTRs,
               userNotifications: {
                 ...state.userNotifications,
                 [senderId]: [newNotif, ...prevSenderNotifs]
               }
-            }
-          })
+            };
+          });
         } catch (error) {
           console.error("Failed to accept join request", error);
           if (error.response && error.response.status === 400) {
@@ -347,37 +320,34 @@ export const useHackathonStore = create(
       /** User A: Reject a join request */
       rejectJoinRequest: async (joinRequestId) => {
         try {
+          const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
+          if (!jr) return;
+
           await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
+          
+          // Refetch everything to ensure perfect consistency with MongoDB
+          await get().fetchHackathonData();
 
           set(state => {
-            const jr = state.joinRequests.find(j => j._id === joinRequestId)
-            if (!jr) return {}
+            const senderId = String(jr.sender?.id);
+            const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId));
+            const prevSenderNotifs = state.userNotifications[senderId] || [];
+            const newNotif = {
+              id:        Date.now().toString() + 'r',
+              text:      `❌ Your request to join "${teamReq?.teamName || teamReq?.title || 'the team'}" was not accepted.`,
+              type:      'rejected',
+              read:      false,
+              createdAt: new Date().toISOString(),
+              meta:      { teamRequestId: jr.teamRequestId }
+            };
 
-            const updatedJRs = state.joinRequests.map(j =>
-              j._id === joinRequestId ? { ...j, status: 'rejected' } : j
-            )
-
-          // notify sender
-          const senderId = String(jr.sender?.id)
-          const teamReq  = state.teamRequests.find(tr => tr._id === jr.teamRequestId)
-          const prevSenderNotifs = state.userNotifications[senderId] || []
-          const newNotif = {
-            id:        Date.now().toString() + 'r',
-            text:      `❌ Your request to join "${teamReq?.teamName || 'the team'}" was not accepted.`,
-            type:      'rejected',
-            read:      false,
-            createdAt: new Date().toISOString(),
-            meta:      { teamRequestId: jr.teamRequestId }
-          }
-
-          return {
-            joinRequests:      updatedJRs,
-            userNotifications: {
-              ...state.userNotifications,
-              [senderId]: [newNotif, ...prevSenderNotifs]
-            }
-          }
-        })
+            return {
+              userNotifications: {
+                ...state.userNotifications,
+                [senderId]: [newNotif, ...prevSenderNotifs]
+              }
+            };
+          });
         } catch (error) {
           console.error("Failed to reject join request", error);
         }

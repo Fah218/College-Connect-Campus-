@@ -9,6 +9,7 @@ import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
 import StatCard from '../components/StatCard'
 import RecommendedSection from '../components/RecommendedSection'
+import Timeline from '../components/Timeline'
 import { Calendar, Trophy, Users, Filter, Layout, List, Bell, BellOff } from 'lucide-react'
 import { useCalendarStore } from '../store/calendarStore'
 import { format } from 'date-fns'
@@ -34,10 +35,14 @@ export default function StudentDashboard() {
     if (r.participationType === 'Individual') {
       return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
     }
-    if (r.participationType === 'Team' && r.teamId) {
-      const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
-      const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
-      return isLead || isMember;
+    if (r.participationType === 'Team') {
+      if (r.teamId) {
+        const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
+        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+        return isLead || isMember;
+      } else if (r.teamDetails) {
+        return (r.teamDetails.members || []).some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+      }
     }
     return false;
   });

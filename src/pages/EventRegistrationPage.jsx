@@ -22,7 +22,7 @@ export default function EventRegistrationPage() {
   const [success, setSuccess] = useState(false)
   
   const [showAddInline, setShowAddInline] = useState(false)
-  const [inlineMember, setInlineMember] = useState({ name: '', email: '', phone: '' })
+  const [inlineMember, setInlineMember] = useState({ name: '', email: '', phone: '', department: '', year: '' })
   
   const [editingMemberId, setEditingMemberId] = useState(null)
   const [editMemberData, setEditMemberData] = useState({ name: '', email: '', phone: '' })
@@ -47,7 +47,7 @@ export default function EventRegistrationPage() {
   const addOfflineMember = () => {
     setOfflineTeamData({
       ...offlineTeamData,
-      members: [...offlineTeamData.members, { name: '', email: '', phone: '' }]
+      members: [...offlineTeamData.members, { name: '', email: '', phone: '', department: '', year: '' }]
     })
   }
 
@@ -88,6 +88,7 @@ export default function EventRegistrationPage() {
   const isApproved = event.status === 'approved'
   const isPastDeadline = new Date(`${event.registrationDeadlineDate}T${event.registrationDeadlineTime}`) < new Date()
 
+  const isHackathon = event.category === 'Hackathon';
   const isIndividualHackathon = event.teamSizeMin === 1 && event.maxTeamSize === 1;
   const isTeamHackathon = event.maxTeamSize > 1;
 
@@ -107,10 +108,14 @@ export default function EventRegistrationPage() {
     if (r.participationType === 'Individual') {
       return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
     }
-    if (r.participationType === 'Team' && r.teamId) {
-      const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
-      const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
-      return isLead || isMember;
+    if (r.participationType === 'Team') {
+      if (r.teamId) {
+        const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
+        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+        return isLead || isMember;
+      } else if (r.teamDetails) {
+        return (r.teamDetails.members || []).some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+      }
     }
     return false;
   });
@@ -240,6 +245,61 @@ export default function EventRegistrationPage() {
       setLoading(false)
     }
   }
+
+  const handleNonHackathonTeamRegistration = async (e) => {
+    e.preventDefault();
+    const totalSize = 1 + offlineTeamData.members.length;
+    if (totalSize < (event.teamSizeMin || 1) || totalSize > (event.maxTeamSize || 99)) {
+      return setErrorMsg(`Team size must be between ${event.teamSizeMin || 1} and ${event.maxTeamSize || 'Unlimited'}.`);
+    }
+
+    const allEmails = [user?.email, ...offlineTeamData.members.map(m => m.email)].map(e => (e || '').toLowerCase().trim());
+    const uniqueEmails = new Set(allEmails);
+    if (uniqueEmails.size !== allEmails.length) {
+      return setErrorMsg('Duplicate emails are not allowed, and members cannot use the Team Lead\'s email.');
+    }
+
+    for (const m of offlineTeamData.members) {
+      if (!m.name.trim() || !m.email.trim() || !m.phone.trim() || !m.department.trim() || !m.year.trim()) {
+        return setErrorMsg('All members must have Full Name, Email, Phone, Department, and Year filled out.');
+      }
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const leader = {
+        name: user?.name,
+        email: user?.email,
+        phone: formData.phone || user?.phone || '',
+        department: formData.department || user?.department || '',
+        year: formData.year || user?.year || '',
+        role: 'Leader'
+      };
+
+      const members = offlineTeamData.members.map(m => ({
+        name: m.name.trim(),
+        email: m.email.trim(),
+        phone: m.phone.trim(),
+        department: m.department.trim(),
+        year: m.year.trim(),
+        role: 'Member'
+      }));
+
+      const teamDetails = {
+        teamName: offlineTeamData.title.trim(),
+        members: [leader, ...members]
+      };
+
+      await registerTeam(event.id || event._id, null, user?.id || user?._id, teamDetails);
+      setSuccess(true);
+      setTimeout(() => navigate('/student-dashboard'), 2000);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to register team');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateOfflineTeam = async (e) => {
     e.preventDefault()
@@ -391,7 +451,97 @@ export default function EventRegistrationPage() {
                 </div>
               )}
 
-              {isIndividualHackathon ? (
+              {!isHackathon && event.participationType === 'Team' ? (
+                <>
+                  <h2 className="text-2xl font-bold mb-6 text-gray-900">Team Registration</h2>
+                  <form onSubmit={handleNonHackathonTeamRegistration} className="space-y-8">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Team Name <span className="text-red-500">*</span></label>
+                      <input type="text" value={offlineTeamData.title} onChange={(e) => setOfflineTeamData({ ...offlineTeamData, title: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow" required placeholder="e.g. The Innovators" />
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-gray-900">Team Leader</h3>
+                      <div className="p-4 bg-gray-50 border rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+                          <input type="text" value={user?.name || ''} disabled className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+                          <input type="email" value={user?.email || ''} disabled className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Phone</label>
+                          <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Department</label>
+                          <input type="text" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Year</label>
+                          <input type="text" value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-gray-900">Team Members</h3>
+                        <p className="text-sm text-gray-500">Size: {offlineTeamData.members.length + 1} / {event.maxTeamSize}</p>
+                      </div>
+                      
+                      {offlineTeamData.members.map((member, index) => (
+                        <div key={index} className="p-4 border rounded-xl relative bg-white">
+                          <button type="button" onClick={() => removeOfflineMember(index)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">
+                            <Trash2 size={18} />
+                          </button>
+                          <h4 className="font-semibold text-sm mb-3">Member {index + 1}</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name <span className="text-red-500">*</span></label>
+                              <input type="text" value={member.name} onChange={(e) => updateOfflineMember(index, 'name', e.target.value)} className="w-full px-3 py-2 border rounded-lg" required />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Email <span className="text-red-500">*</span></label>
+                              <input type="email" value={member.email} onChange={(e) => updateOfflineMember(index, 'email', e.target.value)} className="w-full px-3 py-2 border rounded-lg" required />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Phone <span className="text-red-500">*</span></label>
+                              <input type="tel" value={member.phone} onChange={(e) => updateOfflineMember(index, 'phone', e.target.value)} className="w-full px-3 py-2 border rounded-lg" required />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Department <span className="text-red-500">*</span></label>
+                              <input type="text" value={member.department} onChange={(e) => updateOfflineMember(index, 'department', e.target.value)} className="w-full px-3 py-2 border rounded-lg" required />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Year <span className="text-red-500">*</span></label>
+                              <input type="text" value={member.year} onChange={(e) => updateOfflineMember(index, 'year', e.target.value)} className="w-full px-3 py-2 border rounded-lg" required />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {offlineTeamData.members.length + 1 < (event.maxTeamSize || 99) && (
+                        <button type="button" onClick={addOfflineMember} className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-all flex items-center justify-center gap-2">
+                          <PlusCircle size={20} />
+                          Add Team Member
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <button type="submit" disabled={loading || !isApproved || isPastDeadline || offlineTeamData.members.length + 1 < (event.teamSizeMin || 1)} className="w-full py-4 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {loading ? 'Registering...' : 'Register Team'}
+                      </button>
+                      {offlineTeamData.members.length + 1 < (event.teamSizeMin || 1) && (
+                        <p className="text-red-500 text-sm text-center mt-2">You need at least {event.teamSizeMin} members to register.</p>
+                      )}
+                    </div>
+                  </form>
+                </>
+              ) : isIndividualHackathon ? (
                 <>
                   <h2 className="text-2xl font-bold mb-6 text-gray-900">Applicant Details</h2>
                   <form onSubmit={handleIndividualSubmit} className="space-y-6">
