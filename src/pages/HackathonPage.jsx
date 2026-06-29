@@ -92,11 +92,7 @@ export default function HackathonPage() {
     return Array.from(tags).sort()
   }, [all])
   
-  const allClubs = useMemo(() => {
-    const clubs = new Set()
-    all.forEach(h => { if(h.club) clubs.add(h.club) })
-    return Array.from(clubs).sort()
-  }, [all])
+
 
   // Check conditions
   const getTeamSizeCategory = (rawSize, strSize) => {
@@ -154,10 +150,7 @@ export default function HackathonPage() {
         if (!filters.status.includes(stat)) return false
       }
 
-      // 7. Club
-      if (filters.club.length > 0) {
-        if (!filters.club.includes(h.club)) return false
-      }
+
 
       return true
     })
@@ -189,8 +182,7 @@ export default function HackathonPage() {
     filters.domains.length + 
     filters.mode.length + 
     filters.teamSize.length + 
-    filters.status.length + 
-    filters.club.length
+    filters.status.length
 
   const toggleArrayFilter = (field, value) => {
     setFilters(prev => {
@@ -279,7 +271,6 @@ export default function HackathonPage() {
               {filters.mode.map(v => <Chip key={v} label={v} onRemove={() => removeFilter('mode', v)} />)}
               {filters.teamSize.map(v => <Chip key={v} label={v} onRemove={() => removeFilter('teamSize', v)} />)}
               {filters.status.map(v => <Chip key={v} label={v} onRemove={() => removeFilter('status', v)} />)}
-              {filters.club.map(v => <Chip key={v} label={v} onRemove={() => removeFilter('club', v)} />)}
               
               <button onClick={clearAllFilters} className="text-sm text-blue-200 hover:text-white underline underline-offset-2 ml-2">
                 Clear All
@@ -430,20 +421,7 @@ export default function HackathonPage() {
                 </div>
               </div>
               
-              {/* Club / Organizer */}
-              {allClubs.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-                    Organizer
-                    {filters.club.length > 0 && <span className="bg-primary-100 text-primary-700 text-xs px-2 py-0.5 rounded-full">{filters.club.length}</span>}
-                  </h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {allClubs.map(club => (
-                      <Checkbox key={club} label={club} checked={filters.club.includes(club)} onChange={() => toggleArrayFilter('club', club)} />
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
             </div>
             

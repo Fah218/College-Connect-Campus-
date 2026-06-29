@@ -86,7 +86,8 @@ export default function SignupPage() {
         role: formData.role,
         skills: formData.skills,
         clubName: response.data.user.clubName, // Get true club name from backend
-        department: formData.department
+        department: formData.department,
+        profileImage: response.data.user.profileImage
       });
 
       const routes = {
@@ -165,7 +166,7 @@ export default function SignupPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -178,7 +179,7 @@ export default function SignupPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -193,7 +194,7 @@ export default function SignupPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -206,7 +207,7 @@ export default function SignupPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password *
+                  Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -223,7 +224,7 @@ export default function SignupPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Department
+                      Department (optional)
                     </label>
                     <input
                       type="text"
@@ -236,7 +237,7 @@ export default function SignupPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Year
+                      Year (optional)
                     </label>
                     <select
                       value={formData.year}
@@ -254,7 +255,7 @@ export default function SignupPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Skills (comma-separated)
+                    Skills (optional)
                   </label>
                   <input
                     type="text"
@@ -267,7 +268,7 @@ export default function SignupPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Interests (comma-separated)
+                    Interests (optional)
                   </label>
                   <input
                     type="text"
@@ -312,21 +313,21 @@ export default function SignupPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Club Access Code *
+                    Club Access Code <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.inviteCode}
                     onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value.toUpperCase() })}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 font-mono tracking-widest"
-                    placeholder="e.g. ECELL26"
+                    placeholder="e.g. ECELL09066"
                     required={formData.role === 'club_head'}
                   />
                   <p className="text-xs text-gray-500 mt-1">Provided by the administration. Your club name will be automatically assigned.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Club Description
+                    Club Description (optional)
                   </label>
                   <textarea
                     value={formData.clubDescription}

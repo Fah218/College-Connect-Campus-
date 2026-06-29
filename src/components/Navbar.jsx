@@ -61,8 +61,12 @@ export default function Navbar() {
                     }}
                     className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
                   >
-                    <User size={18} />
-                    <span className="text-sm">{user?.name}</span>
+                    {user?.profileImage ? (
+                      <img src={user.profileImage} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <User size={18} />
+                    )}
+                    <span className="text-sm font-medium">{user?.name}</span>
                   </button>
                   <button
                     onClick={handleLogout}
