@@ -560,6 +560,7 @@ function EventModal({ event, onClose, onSubmit }) {
     participationType: 'Individual',
     maxTeamSize: '',
     bannerImage: '',
+    additionalImage: '',
     capacity: 50,
     capacity: 50,
     
@@ -594,11 +595,7 @@ function EventModal({ event, onClose, onSubmit }) {
   const handleImageUpload = (e, field) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, [field]: reader.result });
-      };
-      reader.readAsDataURL(file);
+      setFormData({ ...formData, [field + 'File']: file, [field]: URL.createObjectURL(file) });
     }
   }
 
@@ -915,7 +912,7 @@ function EventModal({ event, onClose, onSubmit }) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">(Optional) Additional Images</label>
-                <input type="file" accept="image/*" className="w-full px-4 py-2 border rounded-lg" />
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'additionalImage')} className="w-full px-4 py-2 border rounded-lg" />
               </div>
             </div>
           </section>

@@ -42,7 +42,12 @@ export const useEventStore = create(
         };
 
         try {
-          const response = await axios.post('http://localhost:5001/api/events/create', payload);
+          const fd = new FormData();
+          fd.append('eventData', JSON.stringify(payload));
+          if (event.bannerImageFile) fd.append('bannerImage', event.bannerImageFile);
+          if (event.additionalImageFile) fd.append('additionalImages', event.additionalImageFile);
+          
+          const response = await axios.post('http://localhost:5001/api/events/create', fd);
           const dbEvent = response.data.event;
           
           const newEvent = { 
@@ -170,7 +175,8 @@ export const useEventStore = create(
       }
     }),
     {
-      name: 'event-storage'
+      name: 'event-storage',
+      partialize: (state) => ({ auditLogs: state.auditLogs }),
     }
   )
 )

@@ -19,6 +19,7 @@ export default function HackathonPage() {
   const eventStore = useEventStore()
   const events = eventStore.events
   const [search, setSearch] = useState('')
+  const [modalImageSrc, setModalImageSrc] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   
   const [filters, setFilters] = useState({
@@ -57,6 +58,7 @@ export default function HackathonPage() {
         participants: e.attendees || 0,
         createdAt:   e.createdAt,
         bannerImage: e.bannerImage,
+        additionalImage: (e.additionalImages?.[0] || e.additionalImage),
         problemStatementPdf: e.problemStatementPdf,
         club:        e.club,
         source:      'event'
@@ -443,6 +445,15 @@ export default function HackathonPage() {
           </div>
         </div>
       )}
+      {/* Image Modal */}
+      {modalImageSrc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalImageSrc(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <X size={32} />
+          </button>
+          <img src={modalImageSrc} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   )
 }
@@ -476,8 +487,31 @@ function HackathonCard({ hackathon: h }) {
       <div className="bg-white rounded-xl shadow-sm border hover:shadow-md hover:border-primary-300 transition-all h-full flex flex-col overflow-hidden">
 
         {/* Banner */}
-        {h.bannerImage ? (
-          <img src={h.bannerImage} alt={h.title} className="w-full h-36 object-cover" />
+        {h.bannerImage || (h.additionalImages?.[0] || h.additionalImage) ? (
+          <div className="flex w-full h-36">
+            {h.bannerImage && (
+              <div className="relative group flex-1 h-full">
+                <img src={h.bannerImage} alt={h.title} className="w-full h-full object-cover" />
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setModalImageSrc(h.bannerImage); }}
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Maximize2 className="text-white w-6 h-6" />
+                </button>
+              </div>
+            )}
+            {(h.additionalImages?.[0] || h.additionalImage) && (
+              <div className="relative group w-1/3 border-l border-white h-full bg-gray-100">
+                <img src={(h.additionalImages?.[0] || h.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setModalImageSrc((h.additionalImages?.[0] || h.additionalImage)); }}
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Maximize2 className="text-white w-6 h-6" />
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="w-full h-14 bg-gradient-to-r from-primary-500 to-blue-700" />
         )}

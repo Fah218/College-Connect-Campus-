@@ -5,7 +5,7 @@ import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
-import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Bell } from 'lucide-react'
+import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Bell, Maximize2 } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 
 function safeFormat(d, f = 'MMM dd, yyyy') {
@@ -23,6 +23,7 @@ export default function HackathonDetails() {
   const store = useHackathonStore()
   const { events } = useEventStore()
   const { user, isAuthenticated, addNotification } = useAuthStore()
+  const [modalImageSrc, setModalImageSrc] = useState(null)
 
 
   // Strip prefixes (ev- or st-) if present for searching
@@ -66,6 +67,7 @@ export default function HackathonDetails() {
     tags: raw.tags || (raw.domain ? [raw.domain] : []),
     prize: raw.prizePool || raw.prize,
     bannerImage: raw.bannerImage,
+    additionalImage: (raw.additionalImages?.[0] || raw.additionalImage),
     contactName: raw.contactName,
     contactEmail: raw.contactEmail,
     contactPhone: raw.contactPhone,
@@ -209,6 +211,15 @@ export default function HackathonDetails() {
           </div>
         </div>
       </div>
+      {/* Image Modal */}
+      {modalImageSrc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalImageSrc(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <X size={32} />
+          </button>
+          <img src={modalImageSrc} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   )
 }

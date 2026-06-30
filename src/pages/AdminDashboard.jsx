@@ -10,7 +10,7 @@ import InsightCard from '../components/InsightCard'
 import ExportButton from '../components/ExportButton'
 import Timeline from '../components/Timeline'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { Calendar, Users, CheckCircle, Clock, FileText, Eye, X, MapPin, Tag, Info } from 'lucide-react'
+import { Calendar, Users, CheckCircle, Clock, FileText, Eye, X, MapPin, Tag, Info, Maximize2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function AdminDashboard() {
@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [viewingEvent, setViewingEvent] = useState(null)
   const [managingClub, setManagingClub] = useState(null)
   const [clubHeads, setClubHeads] = useState([])
+  const [modalImageSrc, setModalImageSrc] = useState(null)
   const { clubs: realClubs, fetchClubs, toggleArchiveStatus } = useClubStore()
   const { adminStats, fetchAdminStats } = useRegistrationStore()
   
@@ -186,6 +187,15 @@ export default function AdminDashboard() {
           toggleArchiveStatus={toggleArchiveStatus}
         />
       )}
+      {/* Image Modal */}
+      {modalImageSrc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalImageSrc(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <X size={32} />
+          </button>
+          <img src={modalImageSrc} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   )
 }
@@ -203,8 +213,31 @@ function ApprovalSection({ events, onApprove, onReject, onView }) {
         events.map(event => (
           <div key={event.id} className="border rounded-xl p-5 hover:shadow-md transition-shadow bg-white">
             {/* Banner strip if banner exists */}
-            {event.bannerImage && (
-              <img src={event.bannerImage} alt={event.title} className="w-full h-28 object-cover rounded-lg mb-4" />
+            {(event.bannerImage || (event.additionalImages?.[0] || event.additionalImage)) && (
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                {event.bannerImage && (
+                  <div className="relative group shrink-0 w-full h-28 rounded-lg overflow-hidden bg-gray-100">
+                    <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setModalImageSrc(event.bannerImage); }}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Maximize2 className="text-white w-6 h-6" />
+                    </button>
+                  </div>
+                )}
+                {(event.additionalImages?.[0] || event.additionalImage) && (
+                  <div className="relative group shrink-0 w-24 h-28 rounded-lg overflow-hidden bg-gray-100">
+                    <img src={(event.additionalImages?.[0] || event.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setModalImageSrc((event.additionalImages?.[0] || event.additionalImage)); }}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Maximize2 className="text-white w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="flex justify-between items-start mb-3">
@@ -295,8 +328,31 @@ function AdminEventViewModal({ event, onClose, onApprove, onReject }) {
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
 
         {/* Banner */}
-        {event.bannerImage ? (
-          <img src={event.bannerImage} alt={event.title} className="w-full h-48 object-cover rounded-t-2xl" />
+        {event.bannerImage || (event.additionalImages?.[0] || event.additionalImage) ? (
+          <div className="flex w-full h-48 rounded-t-2xl overflow-hidden">
+            {event.bannerImage && (
+              <div className="relative group flex-1 h-full">
+                <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => setModalImageSrc(event.bannerImage)}
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Maximize2 className="text-white w-8 h-8" />
+                </button>
+              </div>
+            )}
+            {(event.additionalImages?.[0] || event.additionalImage) && (
+              <div className="relative group w-1/3 border-l-2 border-white h-full bg-gray-100">
+                <img src={(event.additionalImages?.[0] || event.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => setModalImageSrc((event.additionalImages?.[0] || event.additionalImage))}
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Maximize2 className="text-white w-6 h-6" />
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="w-full h-16 bg-gradient-to-r from-primary-600 to-purple-600 rounded-t-2xl" />
         )}

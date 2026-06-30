@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Users, Tag, Bell, BellOff } from 'lucide-react'
+import { Calendar, MapPin, Users, Tag, Bell, BellOff, Maximize2, X, Image as ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { useState } from 'react'
 import { useCalendarStore } from '../store/calendarStore'
@@ -7,12 +7,19 @@ import { useCalendarStore } from '../store/calendarStore'
 export default function EventCard({ event, onRegister, isRegistered }) {
   const { addReminder, removeReminder, hasReminder } = useCalendarStore()
   const [toast, setToast] = useState(null)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [modalImageSrc, setModalImageSrc] = useState('')
 
   const reminded = hasReminder(event.id)
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const openImage = (src) => {
+    setModalImageSrc(src);
+    setShowImageModal(true);
   }
 
   const handleReminder = () => {
@@ -32,6 +39,34 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         <div className={`absolute top-3 right-3 left-3 z-10 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all
           ${toast.type === 'info' ? 'bg-gray-700 text-white' : 'bg-green-600 text-white'}`}>
           {toast.msg}
+        </div>
+      )}
+
+      {/* Images */}
+      {(event.bannerImage || (event.additionalImages?.[0] || event.additionalImage)) && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          {event.bannerImage && (
+            <div className="relative group shrink-0 w-full h-36 rounded-lg overflow-hidden bg-gray-100">
+              <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
+              <button 
+                onClick={() => openImage(event.bannerImage)}
+                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Maximize2 className="text-white w-6 h-6" />
+              </button>
+            </div>
+          )}
+          {(event.additionalImages?.[0] || event.additionalImage) && (
+            <div className="relative group shrink-0 w-24 h-36 rounded-lg overflow-hidden bg-gray-100">
+              <img src={(event.additionalImages?.[0] || event.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
+              <button 
+                onClick={() => openImage((event.additionalImages?.[0] || event.additionalImage))}
+                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Maximize2 className="text-white w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -109,6 +144,15 @@ export default function EventCard({ event, onRegister, isRegistered }) {
         >
           {event.category === 'Hackathon' ? 'View Hackathon' : 'Register Now'}
         </Link>
+      )}
+      {/* Image Modal */}
+      {showImageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setShowImageModal(false)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <X size={32} />
+          </button>
+          <img src={modalImageSrc} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
       )}
     </div>
   )

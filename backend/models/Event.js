@@ -38,6 +38,9 @@ const eventSchema = new mongoose.Schema({
   maxParticipants: { type: Number },
   maxTeamSize: { type: Number },
   bannerImage: { type: String },
+  bannerImagePublicId: { type: String },
+  additionalImages: [{ type: String }],
+  additionalImagesPublicIds: [{ type: String }],
   
   // Hackathon specific
   prizePool: { type: String },
