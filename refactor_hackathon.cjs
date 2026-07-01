@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+const fs = require('fs');
+const filePath = 'src/pages/HackathonDetails.jsx';
+
+const content = `import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
-import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Maximize2, ExternalLink, Mail, ShieldAlert } from 'lucide-react'
+import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Bell, Maximize2, ExternalLink, Mail, ShieldAlert } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 
 function safeFormat(d, f = 'MMM dd, yyyy') {
@@ -56,7 +59,7 @@ export default function HackathonDetails() {
     endTime: raw.endTime,
     deadline: raw.registrationDeadlineDate || raw.deadline,
     deadlineTime: raw.registrationDeadlineTime,
-    teamSize: raw.maxTeamSize ? `Up to ${raw.maxTeamSize}` : (raw.teamSize || 'Team'),
+    teamSize: raw.maxTeamSize ? \`Up to \${raw.maxTeamSize}\` : (raw.teamSize || 'Team'),
     location: raw.location || raw.college || 'TBA',
     venueLink: raw.venueLink || raw.platformLink,
     mode: raw.mode || 'Offline',
@@ -94,7 +97,7 @@ export default function HackathonDetails() {
 
   const handleRegister = () => {
     if (!isAuthenticated) { navigate('/login'); return }
-    navigate(`/events/${h.id}/register`)
+    navigate(\`/events/\${h.id}/register\`)
   }
 
   const isApproved = h.status === 'approved'
@@ -102,7 +105,7 @@ export default function HackathonDetails() {
   // Registration deadline logic
   let isPastDeadline = false;
   if (h.deadline) {
-    const deadlineStr = h.deadlineTime ? `${h.deadline}T${h.deadlineTime}` : h.deadline;
+    const deadlineStr = h.deadlineTime ? \`\${h.deadline}T\${h.deadlineTime}\` : h.deadline;
     if (new Date(deadlineStr) < new Date()) {
       isPastDeadline = true;
     }
@@ -113,7 +116,7 @@ export default function HackathonDetails() {
       <Navbar />
       
       {/* Banner */}
-      {h.bannerImage && (
+      {h.bannerImage ? (
         <div className="w-full h-64 md:h-96 relative">
           <img src={h.bannerImage} alt={h.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -127,9 +130,19 @@ export default function HackathonDetails() {
             )}
           </div>
         </div>
+      ) : (
+        <div className="w-full pt-12 pb-8 bg-gradient-to-r from-primary-900 to-indigo-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <span className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+              Hackathon
+            </span>
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 leading-tight">{h.title}</h1>
+            {h.shortDesc && <p className="text-gray-200 text-lg md:text-xl max-w-3xl">{h.shortDesc}</p>}
+          </div>
+        </div>
       )}
 
-      <div className={`flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full ${!h.bannerImage ? 'pt-8' : ''}`}>
+      <div className={\`flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full \${!h.bannerImage ? 'pt-8' : ''}\`}>
         
         {!isApproved && (
           <div className="mb-8 p-4 bg-yellow-50 text-yellow-800 rounded-lg flex items-center gap-3 border border-yellow-200 shadow-sm">
@@ -142,17 +155,6 @@ export default function HackathonDetails() {
           
           {/* Left Column: Main Content */}
           <div className="lg:col-span-8 space-y-8">
-            
-            {/* Hero Card when no banner */}
-            {!h.bannerImage && (
-              <div className="bg-white rounded-xl shadow-sm border p-6 md:p-8">
-                <span className="inline-block px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-primary-100">
-                  Hackathon
-                </span>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight">{h.title}</h1>
-                {h.shortDesc && <p className="text-gray-600 text-lg">{h.shortDesc}</p>}
-              </div>
-            )}
             
             {/* Quick Details Grid */}
             <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -239,7 +241,7 @@ export default function HackathonDetails() {
             {h.problemStatementPdf && (
               <div className="bg-white rounded-xl shadow-sm border p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Resources</h2>
-                <a href={h.problemStatementPdf} download={`${h.title.replace(/s+/g, '_')}_Problem_Statement.pdf`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-semibold transition border border-purple-200">
+                <a href={h.problemStatementPdf} download={\`\${h.title.replace(/\s+/g, '_')}_Problem_Statement.pdf\`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-semibold transition border border-purple-200">
                   📄 Download Problem Statement
                 </a>
               </div>
@@ -252,7 +254,7 @@ export default function HackathonDetails() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {h.additionalImages.map((imgUrl, idx) => (
                     <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 aspect-square" onClick={() => setModalImageSrc(imgUrl)}>
-                      <img src={imgUrl} alt={`Gallery image ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <img src={imgUrl} alt={\`Gallery image \${idx + 1}\`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="text-white font-medium text-sm px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-md border border-white/30">View</span>
                       </div>
@@ -281,7 +283,7 @@ export default function HackathonDetails() {
                       <div className="p-2 bg-gray-50 rounded-lg text-gray-500"><Mail size={20} /></div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{h.contactName}</p>
-                        <p className="text-xs text-blue-600"><a href={`mailto:${h.contactEmail}`} className="hover:underline">{h.contactEmail}</a> {h.contactPhone && `• ${h.contactPhone}`}</p>
+                        <p className="text-xs text-blue-600"><a href={\`mailto:\${h.contactEmail}\`} className="hover:underline">{h.contactEmail}</a> {h.contactPhone && \`• \${h.contactPhone}\`}</p>
                       </div>
                     </div>
                   )}
@@ -305,7 +307,7 @@ export default function HackathonDetails() {
                 ) : (
                   <div className="flex justify-between items-center py-2 border-b border-gray-50">
                     <span className="text-gray-500">Status</span>
-                    <span className={`font-semibold ${isPastDeadline ? 'text-red-500' : 'text-green-600'}`}>
+                    <span className={\`font-semibold \${isPastDeadline ? 'text-red-500' : 'text-green-600'}\`}>
                       {isPastDeadline ? 'Closed' : 'Open'}
                     </span>
                   </div>
@@ -330,7 +332,7 @@ export default function HackathonDetails() {
                 
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-gray-500">Capacity</span>
-                  <span className="font-semibold text-gray-900">{h.maxParticipants ? `${h.maxParticipants} participants` : 'Unlimited'}</span>
+                  <span className="font-semibold text-gray-900">{h.maxParticipants ? \`\${h.maxParticipants} participants\` : 'Unlimited'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
@@ -356,18 +358,23 @@ export default function HackathonDetails() {
 
                 {h.teamFormationAllowed && (
                   <Link 
-                    to={`/hackathons/${h.id}/teammates`}
+                    to={\`/hackathons/\${h.id}/teammates\`}
                     className="w-full py-3 bg-white text-primary-600 rounded-lg font-bold border border-primary-200 hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <Users size={18} /> Find Teammates
                   </Link>
                 )}
                 
-
+                <button 
+                  onClick={() => addNotification({ title: 'Reminder Set', message: 'You will be notified before the deadline.', priority: 'low' })}
+                  className="w-full py-2 bg-gray-50 text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <Bell size={16} /> Set Reminder
+                </button>
                 
                 {h.contactEmail && (
                   <a 
-                    href={`mailto:${h.contactEmail}`}
+                    href={\`mailto:\${h.contactEmail}\`}
                     className="w-full py-2 bg-white text-gray-600 rounded-lg font-medium hover:text-gray-900 transition-colors flex items-center justify-center gap-2 text-sm"
                   >
                     <Mail size={16} /> Contact Organizer
@@ -392,3 +399,7 @@ export default function HackathonDetails() {
     </div>
   )
 }
+`
+
+fs.writeFileSync(filePath, content);
+console.log('Update applied successfully!');
