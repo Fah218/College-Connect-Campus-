@@ -7,8 +7,19 @@ export const useEventStore = create(
     (set, get) => ({
       events: [],
       auditLogs: [],
+      isLoading: false,
+      error: null,
+      lastFetched: null,
       
-      fetchEvents: async () => {
+      fetchEvents: async (force = false) => {
+        const { lastFetched, isLoading } = get();
+        // Cache mechanism: don't fetch if less than 60 seconds ago unless forced
+        if (!force && lastFetched && Date.now() - lastFetched < 60000) {
+          return;
+        }
+        if (isLoading && !force) return;
+        
+        set({ isLoading: true, error: null });
         try {
           const response = await axios.get('http://localhost:5001/api/events');
           const dbEvents = response.data.events.map(dbEvent => ({
@@ -20,9 +31,10 @@ export const useEventStore = create(
             date: dbEvent.date || dbEvent.startDate,
             time: dbEvent.time || dbEvent.startTime
           }));
-          set({ events: dbEvents });
+          set({ events: dbEvents, isLoading: false, lastFetched: Date.now() });
         } catch (error) {
           console.error("Error fetching events from DB:", error);
+          set({ isLoading: false, error: error.message });
         }
       },
       
@@ -77,15 +89,48 @@ export const useEventStore = create(
       updateEvent: async (id, updates) => {
         try {
           // If the event has a MongoDB ObjectId (string), save to backend
-          if (typeof id === 'string') {
-            await axios.put(`http://localhost:5001/api/events/${id}`, { 
-              ...updates,
-              status: 'pending' // Re-evaluate upon edit
+if (typeof id === 'string') {
+            const fd = new FormData();
+            
+            // Extract file objects
+            const bannerFile = updates.bannerImageFile;
+            const additionalFiles = updates.additionalImageFile; // note this is often an array or a single file
+            
+            // Remove file objects from updates to avoid circular JSON
+            const cleanUpdates = { ...updates, status: 'pending' };
+            delete cleanUpdates.bannerImageFile;
+            delete cleanUpdates.additionalImageFile;
+            
+            fd.append('eventData', JSON.stringify(cleanUpdates));
+            
+            if (bannerFile) fd.append('bannerImage', bannerFile);
+            if (additionalFiles && additionalFiles.length) {
+              for(let i=0; i<additionalFiles.length; i++) {
+                fd.append('additionalImages', additionalFiles[i]);
+              }
+            } else if (additionalFiles) {
+              fd.append('additionalImages', additionalFiles);
+            }
+
+            const response = await axios.put(`http://localhost:5001/api/events/${id}`, fd, {
+              // axios automatically sets multipart boundary
             });
-          }
-          
-          set((state) => ({
-            events: state.events.map(e => e.id === id ? { ...e, ...updates, status: 'pending' } : e),
+            
+            set((state) => ({
+              events: state.events.map(e => String(e.id || e._id) === String(id) ? { ...e, ...response.data.event, status: 'pending' } : e),
+              auditLogs: [...state.auditLogs, {
+                id: Date.now(),
+                action: 'updated',
+                eventId: id,
+                eventTitle: state.events.find(ev => String(ev.id || ev._id) === String(id))?.title,
+                timestamp: new Date().toISOString(),
+                user: 'Club Head'
+              }]
+            }));
+          } else {
+            // Local fallback
+            set((state) => ({
+              events: state.events.map(e => e.id === id ? { ...e, ...updates, status: 'pending' } : e),
             auditLogs: [...state.auditLogs, {
               id: Date.now(),
               action: 'updated',
@@ -95,8 +140,10 @@ export const useEventStore = create(
               user: 'Club Head'
             }]
           }));
+          }
         } catch (error) {
           console.error("Error updating event:", error);
+          throw error;
         }
       },
       

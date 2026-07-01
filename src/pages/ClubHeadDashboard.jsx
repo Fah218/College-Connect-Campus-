@@ -45,31 +45,31 @@ export default function ClubHeadDashboard() {
   const approvedEvents = myEvents.filter(e => e.status === 'approved')
   
   const handleSubmit = async (formData) => {
-    if (editingEvent) {
-      await updateEvent(editingEvent.id || editingEvent._id, formData)
-      addNotification({
-        title: 'Event Updated',
-        message: `${formData.title} has been updated`,
-        priority: 'low'
-      })
-    } else {
-      try {
+    try {
+      if (editingEvent) {
+        await updateEvent(editingEvent.id || editingEvent._id, formData)
+        addNotification({
+          title: 'Event Updated',
+          message: `${formData.title} has been updated`,
+          priority: 'low'
+        })
+      } else {
         await addEvent({ ...formData, club: user?.clubName || user?.name || 'My Club' })
         addNotification({
           title: 'Event Created',
           message: `${formData.title} has been submitted for approval`,
           priority: 'medium'
         })
-      } catch (error) {
-        addNotification({
-          title: 'Error',
-          message: 'Failed to create event in database.',
-          priority: 'high'
-        })
       }
+      setShowModal(false)
+      setEditingEvent(null)
+    } catch (error) {
+      addNotification({
+        title: 'Error',
+        message: error.message || 'Operation failed. Please try again.',
+        priority: 'high'
+      })
     }
-    setShowModal(false)
-    setEditingEvent(null)
   }
   
   const exportData = myEvents.map(e => ({
@@ -542,6 +542,7 @@ function EventModal({ event, onClose, onSubmit }) {
   const { events } = useEventStore()
   const { predictAttendance, predictApprovalSuccess } = useAnalyticsStore()
   const [step, setStep] = useState(event ? 2 : 1)
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState(event || {
     title: '',
     shortDescription: '',
@@ -561,7 +562,6 @@ function EventModal({ event, onClose, onSubmit }) {
     maxTeamSize: '',
     bannerImage: '',
     additionalImage: '',
-    capacity: 50,
     capacity: 50,
     
     // Contact details (Common)
@@ -603,15 +603,42 @@ function EventModal({ event, onClose, onSubmit }) {
     predictAttendance(formData, events.filter(e => e.status === 'approved')) : null
   const approvalPred = formData.title ? predictApprovalSuccess(formData) : null
   
-  const handleSubmit = (e) => {
+
+  const handleRemoveExistingImage = (idx) => {
+    const newAdditionalImages = [...(formData.additionalImages || [])];
+    const newAdditionalImagesPublicIds = [...(formData.additionalImagesPublicIds || [])];
+    const deletedPublicId = newAdditionalImagesPublicIds[idx];
+    
+    newAdditionalImages.splice(idx, 1);
+    newAdditionalImagesPublicIds.splice(idx, 1);
+    
+    const newDeletedIds = [...(formData.deletedImagesPublicIds || [])];
+    if (deletedPublicId) {
+       newDeletedIds.push(deletedPublicId);
+    }
+    
+    setFormData({
+      ...formData,
+      additionalImages: newAdditionalImages,
+      additionalImagesPublicIds: newAdditionalImagesPublicIds,
+      deletedImagesPublicIds: newDeletedIds
+    });
+  }
+
+    const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsSubmitting(true)
     const finalData = {
       ...formData,
       date: formData.startDate,
       time: formData.startTime,
       capacity: formData.maxParticipants || formData.capacity
     }
-    onSubmit(finalData)
+    try {
+      await onSubmit(finalData)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   
   const categories = ['Workshop', 'Hackathon', 'Seminar', 'Competition', 'Club Activity'];
@@ -910,10 +937,32 @@ function EventModal({ event, onClose, onSubmit }) {
                 <label className="block text-sm font-medium mb-1">Event Banner Image</label>
                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'bannerImage')} className="w-full px-4 py-2 border rounded-lg" />
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">(Optional) Additional Images</label>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'additionalImage')} className="w-full px-4 py-2 border rounded-lg" />
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'additionalImage')} className="w-full px-4 py-2 border rounded-lg mb-2" />
+                {formData.additionalImages && formData.additionalImages.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Existing Gallery Images (Click 'X' to delete):</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {formData.additionalImages.map((imgUrl, idx) => (
+                        <div key={idx} className="relative group overflow-hidden rounded-lg border aspect-[4/3]">
+                          <img src={imgUrl} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExistingImage(idx)}
+                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title="Delete Image"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
             </div>
           </section>
           

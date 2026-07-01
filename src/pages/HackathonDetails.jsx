@@ -21,7 +21,7 @@ export default function HackathonDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
   const store = useHackathonStore()
-  const { events } = useEventStore()
+  const { events, isLoading } = useEventStore()
   const { user, isAuthenticated, addNotification } = useAuthStore()
   const [modalImageSrc, setModalImageSrc] = useState(null)
 
@@ -194,6 +194,27 @@ export default function HackathonDetails() {
             {String(h.description || "No description provided.")}
           </div>
         </div>
+
+
+        {h.additionalImages && h.additionalImages.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+            <h2 className="text-xl font-bold mb-4">Event Gallery</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {h.additionalImages.map((imgUrl, idx) => (
+                <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 bg-gray-50 aspect-[4/3]" onClick={() => setModalImageSrc(imgUrl)}>
+                  <img 
+                    src={imgUrl} 
+                    alt={`Gallery image ${idx + 1}`} 
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="text-white font-medium text-sm px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">View Full</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Team Actions */}
         <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">

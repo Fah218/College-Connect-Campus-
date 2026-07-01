@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
+import EventCardSkeleton from '../components/EventCardSkeleton'
 import StatCard from '../components/StatCard'
 import RecommendedSection from '../components/RecommendedSection'
 import Timeline from '../components/Timeline'
@@ -78,7 +79,7 @@ export default function StudentDashboard() {
     return matchesCategory && matchesSearch
   })
   
-  const categories = ['all', ...new Set(events.map(e => e.category))]
+  const categories = ['all', ...new Set(approvedEvents.map(e => e.category))]
   
   const handleRegister = (eventId) => {
     try {

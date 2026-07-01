@@ -35,6 +35,19 @@ export const createEvent = async (req, res) => {
       }
     };
 
+    // Process explicit deletions of old gallery images
+    if (updates.deletedImagesPublicIds && updates.deletedImagesPublicIds.length > 0) {
+      for (const publicId of updates.deletedImagesPublicIds) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error('Failed to delete image from Cloudinary:', publicId, err);
+        }
+      }
+    }
+    // Clean up payload so it doesn't get saved to mongo
+    delete updates.deletedImagesPublicIds;
+
     if (req.files) {
       if (req.files.bannerImage && req.files.bannerImage.length > 0) {
         const res = await uploadToCloudinary(req.files.bannerImage[0]);
@@ -157,8 +170,8 @@ export const updateEvent = async (req, res) => {
         updates.bannerImagePublicId = res.public_id;
       }
       if (req.files.additionalImages && req.files.additionalImages.length > 0) {
-        updates.additionalImages = [];
-        updates.additionalImagesPublicIds = [];
+        if (!updates.additionalImages) updates.additionalImages = [];
+        if (!updates.additionalImagesPublicIds) updates.additionalImagesPublicIds = [];
         for (const file of req.files.additionalImages) {
           const res = await uploadToCloudinary(file);
           updates.additionalImages.push(res.url);

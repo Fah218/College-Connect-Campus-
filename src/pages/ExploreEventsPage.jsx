@@ -5,6 +5,7 @@ import { useRegistrationStore } from '../store/registrationStore'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
+import EventCardSkeleton from '../components/EventCardSkeleton'
 import Timeline from '../components/Timeline'
 import { Search, Filter, Calendar, MapPin, Tag, Layers, X, Monitor, List, Layout, ArrowUpDown } from 'lucide-react'
 import { format } from 'date-fns'
@@ -24,7 +25,7 @@ export default function ExploreEventsPage() {
   const [view, setView]               = useState('list')
 
   // Show all events (including pending) so creators can see them immediately
-  const approved = useMemo(() => events, [events])
+  const approved = useMemo(() => events.filter(e => e.status === 'approved'), [events])
 
   // Derive unique club list from approved events
   const clubs = useMemo(() => {

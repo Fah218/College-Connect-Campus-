@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
+import ImageViewer from '../components/ImageViewer'
 import StatCard from '../components/StatCard'
 import InsightCard from '../components/InsightCard'
 import ExportButton from '../components/ExportButton'
@@ -21,7 +22,8 @@ export default function AdminDashboard() {
   const [viewingEvent, setViewingEvent] = useState(null)
   const [managingClub, setManagingClub] = useState(null)
   const [clubHeads, setClubHeads] = useState([])
-  const [modalImageSrc, setModalImageSrc] = useState(null)
+  const [viewerImages, setViewerImages] = useState(null)
+  const [viewerIndex, setViewerIndex] = useState(0)
   const { clubs: realClubs, fetchClubs, toggleArchiveStatus } = useClubStore()
   const { adminStats, fetchAdminStats } = useRegistrationStore()
   
@@ -219,7 +221,7 @@ function ApprovalSection({ events, onApprove, onReject, onView }) {
                   <div className="relative group shrink-0 w-full h-28 rounded-lg overflow-hidden bg-gray-100">
                     <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setModalImageSrc(event.bannerImage); }}
+                      onClick={(e) => { e.stopPropagation(); setViewerImages([event.bannerImage]); setViewerIndex(0);; }}
                       className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Maximize2 className="text-white w-6 h-6" />
@@ -230,7 +232,7 @@ function ApprovalSection({ events, onApprove, onReject, onView }) {
                   <div className="relative group shrink-0 w-24 h-28 rounded-lg overflow-hidden bg-gray-100">
                     <img src={(event.additionalImages?.[0] || event.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setModalImageSrc((event.additionalImages?.[0] || event.additionalImage)); }}
+                      onClick={(e) => { e.stopPropagation(); setViewerImages(event.additionalImages?.length ? event.additionalImages : [event.additionalImage].filter(Boolean)); setViewerIndex(0);; }}
                       className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Maximize2 className="text-white w-5 h-5" />
@@ -319,7 +321,7 @@ function ApprovalSection({ events, onApprove, onReject, onView }) {
 }
 
 // ─── Admin Event View Modal ───────────────────────────────────────────────────
-function AdminEventViewModal({ event, onClose, onApprove, onReject }) {
+function AdminEventViewModal({ event, onClose, onApprove, onReject, onImageClick }) {
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectBox, setShowRejectBox] = useState(false)
 
@@ -334,7 +336,7 @@ function AdminEventViewModal({ event, onClose, onApprove, onReject }) {
               <div className="relative group flex-1 h-full">
                 <img src={event.bannerImage} alt={event.title} className="w-full h-full object-cover" />
                 <button 
-                  onClick={() => setModalImageSrc(event.bannerImage)}
+                  onClick={() => { setViewerImages([event.bannerImage]); setViewerIndex(0); }}
                   className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Maximize2 className="text-white w-8 h-8" />
@@ -345,7 +347,7 @@ function AdminEventViewModal({ event, onClose, onApprove, onReject }) {
               <div className="relative group w-1/3 border-l-2 border-white h-full bg-gray-100">
                 <img src={(event.additionalImages?.[0] || event.additionalImage)} alt="Additional" className="w-full h-full object-cover" />
                 <button 
-                  onClick={() => setModalImageSrc((event.additionalImages?.[0] || event.additionalImage))}
+                  onClick={() => { setViewerImages(event.additionalImages?.length ? event.additionalImages : [event.additionalImage].filter(Boolean)); setViewerIndex(0); }}
                   className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Maximize2 className="text-white w-6 h-6" />
