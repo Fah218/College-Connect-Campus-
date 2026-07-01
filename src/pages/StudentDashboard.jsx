@@ -16,7 +16,9 @@ import { useCalendarStore } from '../store/calendarStore'
 import { format } from 'date-fns'
 
 export default function StudentDashboard() {
-  const { events } = useEventStore()
+  const { events, isLoading } = useEventStore()
+  console.log("StudentDashboard Render. events length:", events.length, "isLoading:", isLoading)
+  
   const { hackathons, teamRequests, joinRequests, fetchHackathonData } = useHackathonStore()
   const { getRecommendedEvents } = useRecommendationStore()
   const { addNotification, user } = useAuthStore()
@@ -230,17 +232,25 @@ export default function StudentDashboard() {
             <div>
               <h2 className="text-2xl font-bold mb-4">All Events</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEvents.map(event => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onRegister={handleRegister}
-                    isRegistered={registeredEvents.some(re => String(re.id || re._id) === String(event.id || event._id))}
-                  />
-                ))}
+                {isLoading ? (
+                  <>
+                    <EventCardSkeleton />
+                    <EventCardSkeleton />
+                    <EventCardSkeleton />
+                  </>
+                ) : (
+                  filteredEvents.map(event => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onRegister={handleRegister}
+                      isRegistered={registeredEvents.some(re => String(re.id || re._id) === String(event.id || event._id))}
+                    />
+                  ))
+                )}
               </div>
               
-              {filteredEvents.length === 0 && (
+              {!isLoading && filteredEvents.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   No events found matching your filters
                 </div>

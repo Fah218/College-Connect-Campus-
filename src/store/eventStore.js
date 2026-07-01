@@ -19,7 +19,7 @@ export const useEventStore = create(
         }
         if (isLoading && !force) return;
         
-        set({ isLoading: true, error: null });
+        console.log("fetchEvents called. Current events count:", get().events.length); set({ isLoading: true, error: null });
         try {
           const response = await axios.get('http://localhost:5001/api/events');
           const dbEvents = response.data.events.map(dbEvent => ({
@@ -31,7 +31,7 @@ export const useEventStore = create(
             date: dbEvent.date || dbEvent.startDate,
             time: dbEvent.time || dbEvent.startTime
           }));
-          set({ events: dbEvents, isLoading: false, lastFetched: Date.now() });
+          console.log("fetchEvents success. Fetched count:", dbEvents.length); set({ events: dbEvents, isLoading: false, lastFetched: Date.now() });
         } catch (error) {
           console.error("Error fetching events from DB:", error);
           set({ isLoading: false, error: error.message });

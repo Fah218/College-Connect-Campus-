@@ -13,8 +13,10 @@ import { format } from 'date-fns'
 const CATEGORIES = ['All', 'Workshop', 'Seminar', 'Hackathon', 'Competition']
 
 export default function ExploreEventsPage() {
-  const { events } = useEventStore()
-  const { registrations } = useRegistrationStore()
+  const { events, isLoading } = useEventStore()
+  console.log("ExploreEventsPage Render. events length:", events.length, "isLoading:", isLoading)
+  
+  const { registrations, fetchStudentRegistrations } = useRegistrationStore()
   const { user } = useAuthStore()
   const [search, setSearch]           = useState('')
   const [category, setCategory]       = useState('All')
@@ -294,7 +296,16 @@ export default function ExploreEventsPage() {
               </div>
             </div>
 
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-20 bg-white border border-dashed rounded-xl">
                 <Search size={48} className="mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-bold text-gray-800 mb-2">No events found</h3>
