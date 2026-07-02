@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useEventStore } from '../store/eventStore'
 import Navbar from '../components/Navbar'
-import { Calendar, Clock, Users, Trophy, Search, X, SlidersHorizontal, ChevronRight, Check } from 'lucide-react'
+import { Calendar, Clock, Users, Trophy, Search, X, SlidersHorizontal, ChevronRight, Check, Maximize2 } from 'lucide-react'
 import { format, isValid, isAfter, isBefore, addDays } from 'date-fns'
 
 function safeFormat(dateStr, fmt = 'MMM dd, yyyy') {

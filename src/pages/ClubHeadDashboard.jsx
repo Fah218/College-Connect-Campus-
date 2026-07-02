@@ -10,11 +10,12 @@ import Timeline from '../components/Timeline'
 import PredictiveInsights from '../components/PredictiveInsights'
 import ExportButton from '../components/ExportButton'
 import ParticipantsModal from '../components/ParticipantsModal'
-import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, X, Upload, XCircle, Settings, Mail, Bell, Shield, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, Search, CheckCircle, Layout, List } from 'lucide-react'
+import ImageViewer from '../components/ImageViewer'
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, X, Upload, XCircle, Settings, Mail, Bell, Shield, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, Search, CheckCircle, Layout, List, Loader2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from 'date-fns'
 
 export default function ClubHeadDashboard() {
-  const { events, addEvent, updateEvent, deleteEvent, getEventSummary } = useEventStore()
+  const { events, addEvent, updateEvent, deleteEvent, getEventSummary, uploadProgress } = useEventStore()
   const { predictAttendance } = useAnalyticsStore()
   const { addNotification } = useAuthStore()
   const [showModal, setShowModal] = useState(false)
@@ -24,6 +25,8 @@ export default function ClubHeadDashboard() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [viewingEvent, setViewingEvent] = useState(null)
   const [viewingParticipants, setViewingParticipants] = useState(null)
+  const [viewerImages, setViewerImages] = useState(null)
+  const [viewerIndex, setViewerIndex] = useState(0)
   
   const { user } = useAuthStore()
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
@@ -401,6 +404,14 @@ function CalendarView({ events, currentDate, selectedDay, onDayClick, onMonthPre
           </div>
         )}
       </div>
+      {/* Fullscreen ImageViewer */}
+      {viewerImages && (
+        <ImageViewer 
+          images={viewerImages} 
+          initialIndex={viewerIndex} 
+          onClose={() => setViewerImages(null)} 
+        />
+      )}
     </div>
   )
 }
@@ -539,7 +550,7 @@ function EventDetailsModal({ event, onClose, onEdit }) {
 }
 
 function EventModal({ event, onClose, onSubmit }) {
-  const { events } = useEventStore()
+  const { events, uploadProgress } = useEventStore()
   const { predictAttendance, predictApprovalSuccess } = useAnalyticsStore()
   const [step, setStep] = useState(event ? 2 : 1)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -592,6 +603,17 @@ function EventModal({ event, onClose, onSubmit }) {
     seminarTopic: ''
   })
   
+  const handleMultipleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setFormData({
+        ...formData,
+        additionalImageFiles: files,
+        // create object URLs for preview if needed
+      });
+    }
+  }
+
   const handleImageUpload = (e, field) => {
     const file = e.target.files[0];
     if (file) {
@@ -940,17 +962,20 @@ function EventModal({ event, onClose, onSubmit }) {
 
               <div>
                 <label className="block text-sm font-medium mb-1">(Optional) Additional Images</label>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'additionalImage')} className="w-full px-4 py-2 border rounded-lg mb-2" />
+                <input type="file" accept="image/*" multiple onChange={handleMultipleImageUpload} className="w-full px-4 py-2 border rounded-lg mb-2" />
+                {formData.additionalImageFiles && formData.additionalImageFiles.length > 0 && (
+                  <p className="text-sm text-green-600 mb-2">{formData.additionalImageFiles.length} new image(s) selected.</p>
+                )}
                 {formData.additionalImages && formData.additionalImages.length > 0 && (
                   <div className="mt-4">
                     <p className="text-sm font-medium text-gray-700 mb-2">Existing Gallery Images (Click 'X' to delete):</p>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                       {formData.additionalImages.map((imgUrl, idx) => (
-                        <div key={idx} className="relative group overflow-hidden rounded-lg border aspect-[4/3]">
-                          <img src={imgUrl} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                        <div key={idx} className="relative group overflow-hidden rounded-lg border aspect-[4/3] cursor-pointer" onClick={() => { setViewerImages(formData.additionalImages); setViewerIndex(idx); }}>
+                          <img src={imgUrl} alt={`Gallery ${idx}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                           <button
                             type="button"
-                            onClick={() => handleRemoveExistingImage(idx)}
+                            onClick={(e) => { e.stopPropagation(); handleRemoveExistingImage(idx); }}
                             className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                             title="Delete Image"
                           >
@@ -985,12 +1010,24 @@ function EventModal({ event, onClose, onSubmit }) {
             </div>
           )}
           
-          <div className="flex gap-3 pt-4 border-t">
+          {isSubmitting && uploadProgress > 0 && (
+            <div className="pt-4 border-t">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Uploading Images...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-primary-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-3 pt-4 border-t mt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">
               Cancel
             </button>
-            <button type="submit" className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700">
-              {event ? 'Update' : 'Create'} Event
+            <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {isSubmitting && <Loader2 className="animate-spin" size={18} />}
+              {isSubmitting ? 'Processing...' : (event ? 'Update Event' : 'Create Event')}
             </button>
           </div>
         </form>

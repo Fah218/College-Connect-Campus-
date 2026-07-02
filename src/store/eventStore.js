@@ -8,6 +8,7 @@ export const useEventStore = create(
       events: [],
       auditLogs: [],
       isLoading: false,
+  uploadProgress: 0,
       error: null,
       lastFetched: null,
       
@@ -42,8 +43,8 @@ export const useEventStore = create(
         const payload = {
           ...event,
           clubName: event.club || 'Tech Club',
-          date: event.date || event.startDate || new Date().toISOString().split('T')[0],
-          time: event.time || event.startTime || '12:00',
+          startDate: event.startDate || event.date || new Date().toISOString().split('T')[0],
+          startTime: event.startTime || event.time || '12:00',
           shortDescription: event.shortDescription || 'No description provided',
           description: event.description || 'No description provided',
           registrationDeadlineDate: event.registrationDeadlineDate || new Date().toISOString().split('T')[0],
@@ -58,8 +59,17 @@ export const useEventStore = create(
           fd.append('eventData', JSON.stringify(payload));
           if (event.bannerImageFile) fd.append('bannerImage', event.bannerImageFile);
           if (event.additionalImageFile) fd.append('additionalImages', event.additionalImageFile);
+          if (event.additionalImageFiles) {
+            event.additionalImageFiles.forEach(file => fd.append('additionalImages', file));
+          }
           
-          const response = await axios.post('http://localhost:5001/api/events/create', fd);
+          const response = await axios.post('http://localhost:5001/api/events/create', fd, {
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              set({ uploadProgress: percentCompleted });
+            }
+          });
+          set({ uploadProgress: 0 });
           const dbEvent = response.data.event;
           
           const newEvent = { 
@@ -88,18 +98,36 @@ export const useEventStore = create(
       
       updateEvent: async (id, updates) => {
         try {
+          // Optimistic UI update immediately
+          set((state) => {
+            const existing = state.events.find(e => String(e.id || e._id) === String(id));
+            if (!existing) return state;
+            
+            // Clean up files so they don't break the UI
+            const optimisticEvent = { ...existing, ...updates, status: 'pending' };
+            delete optimisticEvent.bannerImageFile;
+            delete optimisticEvent.additionalImageFile;
+            delete optimisticEvent.additionalImageFiles;
+
+            return {
+              events: state.events.map(e => String(e.id || e._id) === String(id) ? optimisticEvent : e)
+            };
+          });
+
           // If the event has a MongoDB ObjectId (string), save to backend
 if (typeof id === 'string') {
             const fd = new FormData();
             
             // Extract file objects
             const bannerFile = updates.bannerImageFile;
-            const additionalFiles = updates.additionalImageFile; // note this is often an array or a single file
+            const additionalFiles = updates.additionalImageFile;
+            const additionalImageFilesArr = updates.additionalImageFiles; // note this is often an array or a single file
             
             // Remove file objects from updates to avoid circular JSON
             const cleanUpdates = { ...updates, status: 'pending' };
             delete cleanUpdates.bannerImageFile;
             delete cleanUpdates.additionalImageFile;
+            delete cleanUpdates.additionalImageFiles;
             
             fd.append('eventData', JSON.stringify(cleanUpdates));
             
@@ -111,10 +139,19 @@ if (typeof id === 'string') {
             } else if (additionalFiles) {
               fd.append('additionalImages', additionalFiles);
             }
+            if (additionalImageFilesArr) {
+              for(let i=0; i<additionalImageFilesArr.length; i++) {
+                fd.append('additionalImages', additionalImageFilesArr[i]);
+              }
+            }
 
             const response = await axios.put(`http://localhost:5001/api/events/${id}`, fd, {
-              // axios automatically sets multipart boundary
+              onUploadProgress: (progressEvent) => {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                set({ uploadProgress: percentCompleted });
+              }
             });
+            set({ uploadProgress: 0 });
             
             set((state) => ({
               events: state.events.map(e => String(e.id || e._id) === String(id) ? { ...e, ...response.data.event, status: 'pending' } : e),

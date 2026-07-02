@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import { useHackathonStore } from '../store/hackathonStore'
 import Navbar from '../components/Navbar'
+import ImageViewer from '../components/ImageViewer'
 import { Calendar, MapPin, Users, CheckCircle, Search, PlusCircle, ShieldAlert, Trash2, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
 import axios from 'axios'
@@ -21,6 +22,8 @@ export default function EventRegistrationPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [success, setSuccess] = useState(false)
   const [modalImageSrc, setModalImageSrc] = useState(null)
+  const [viewerImages, setViewerImages] = useState(null)
+  const [viewerIndex, setViewerIndex] = useState(0)
   
   const [showAddInline, setShowAddInline] = useState(false)
   const [inlineMember, setInlineMember] = useState({ name: '', email: '', phone: '', department: '', year: '' })
@@ -1116,7 +1119,7 @@ export default function EventRegistrationPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Event Gallery</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {event.additionalImages.map((imgUrl, idx) => (
-                    <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 aspect-square" onClick={() => setModalImageSrc(imgUrl)}>
+                    <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 aspect-square" onClick={() => { setViewerImages(event.additionalImages); setViewerIndex(idx); }}>
                       <img src={imgUrl} alt={`Gallery image ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="text-white font-medium text-sm px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-md border border-white/30">View</span>
@@ -1137,14 +1140,23 @@ export default function EventRegistrationPage() {
         </div>
       </div>
 
-      {/* Image Modal */}
+      {/* Image Modal (legacy) */}
       {modalImageSrc && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={() => setModalImageSrc(null)}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 transition p-2">
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 transition p-2 z-10">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
           <img src={modalImageSrc} alt="Full view" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
         </div>
+      )}
+
+      {/* Fullscreen ImageViewer */}
+      {viewerImages && (
+        <ImageViewer 
+          images={viewerImages} 
+          initialIndex={viewerIndex} 
+          onClose={() => setViewerImages(null)} 
+        />
       )}
     </div>
   );

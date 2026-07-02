@@ -35,18 +35,9 @@ export const createEvent = async (req, res) => {
       }
     };
 
-    // Process explicit deletions of old gallery images
-    if (updates.deletedImagesPublicIds && updates.deletedImagesPublicIds.length > 0) {
-      for (const publicId of updates.deletedImagesPublicIds) {
-        try {
-          await cloudinary.uploader.destroy(publicId);
-        } catch (err) {
-          console.error('Failed to delete image from Cloudinary:', publicId, err);
-        }
-      }
-    }
-    // Clean up payload so it doesn't get saved to mongo
-    delete updates.deletedImagesPublicIds;
+    
+
+
 
     if (req.files) {
       if (req.files.bannerImage && req.files.bannerImage.length > 0) {
@@ -66,8 +57,11 @@ export const createEvent = async (req, res) => {
     }
 
     // Assuming you have the club head ID from authentication middleware or passed in body
+    console.log("---- ABOUT TO SAVE TO MONGODB ----");
+    console.log("eventData being saved:", JSON.stringify(eventData, null, 2));
     const newEvent = new Event(eventData);
     await newEvent.save();
+    console.log("---- SUCCESSFULLY SAVED TO MONGODB ----", newEvent._id);
     
     res.status(201).json({
       success: true,

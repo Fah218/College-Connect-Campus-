@@ -5,6 +5,7 @@ import { useEventStore } from '../store/eventStore'
 import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
 import Navbar from '../components/Navbar'
+import ImageViewer from '../components/ImageViewer'
 import { Calendar, Clock, Users, Trophy, MapPin, Tag, Award, Plus, X, CheckCircle, ChevronDown, ChevronUp, Search, Maximize2, ExternalLink, Mail, ShieldAlert } from 'lucide-react'
 import { format, isValid } from 'date-fns'
 
@@ -23,6 +24,8 @@ export default function HackathonDetails() {
   const { events, isLoading } = useEventStore()
   const { user, isAuthenticated, addNotification } = useAuthStore()
   const [modalImageSrc, setModalImageSrc] = useState(null)
+  const [viewerImages, setViewerImages] = useState(null)
+  const [viewerIndex, setViewerIndex] = useState(0)
 
   // Strip prefixes (ev- or st-) if present for searching
   const cleanId = id?.replace(/^(ev-|st-)/, '')
@@ -251,7 +254,7 @@ export default function HackathonDetails() {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Event Gallery</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {h.additionalImages.map((imgUrl, idx) => (
-                    <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 aspect-square" onClick={() => setModalImageSrc(imgUrl)}>
+                    <div key={idx} className="relative group overflow-hidden rounded-xl cursor-pointer shadow-sm border border-gray-100 aspect-square" onClick={() => { setViewerImages(h.additionalImages); setViewerIndex(idx); }}>
                       <img src={imgUrl} alt={`Gallery image ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="text-white font-medium text-sm px-4 py-1.5 bg-white/20 rounded-full backdrop-blur-md border border-white/30">View</span>
@@ -380,14 +383,23 @@ export default function HackathonDetails() {
         </div>
       </div>
 
-      {/* Image Modal */}
+      {/* Image Modal (legacy) */}
       {modalImageSrc && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={() => setModalImageSrc(null)}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 transition p-2">
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 transition p-2 z-10">
             <X size={32} />
           </button>
           <img src={modalImageSrc} alt="Full view" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
         </div>
+      )}
+
+      {/* Fullscreen ImageViewer */}
+      {viewerImages && (
+        <ImageViewer 
+          images={viewerImages} 
+          initialIndex={viewerIndex} 
+          onClose={() => setViewerImages(null)} 
+        />
       )}
     </div>
   )
