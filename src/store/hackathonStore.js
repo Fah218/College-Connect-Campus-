@@ -80,14 +80,16 @@ export const useHackathonStore = create(
               _id: tr._id,
               id: tr._id,
               hackathonId: tr.hackathonId,
-              teamName: tr.title || tr.teamName || 'Untitled Team',
+              
               description: tr.description || '',
               requiredRoles: tr.rolesNeeded || tr.roles || [],
               requiredSkills: tr.requiredSkills || tr.skills || [],
               teamSizeLimit: tr.teamSizeLimit || 4,
               status: tr.status || 'open',
-              createdBy: tr.createdBy || 'unknown',
-              currentMembers: tr.currentMembers || []
+              createdBy: typeof tr.createdBy === 'object' && tr.createdBy !== null ? (tr.createdBy._id || tr.createdBy.id || 'unknown') : (tr.createdBy || 'unknown'),
+              owner: typeof tr.createdBy === 'object' && tr.createdBy !== null ? tr.createdBy : undefined,
+              currentMembers: tr.currentMembers || [],
+              offlineMembers: tr.offlineMembers || []
             };
           });
           
@@ -135,30 +137,35 @@ export const useHackathonStore = create(
         try {
           const payload = {
             hackathonId: String(data.hackathonId || 'unknown'),
-            title: data.title || data.teamName || 'Untitled Team Request',
+            title: data.title,
             description: data.description || 'No description provided',
             roles: Array.isArray(data.roles) ? data.roles : (Array.isArray(data.requiredRoles) ? data.requiredRoles.map(r => r.role || r) : []),
             skills: data.skills || data.requiredSkills || [],
-            createdBy: data.createdBy || data.owner?.id ? String(data.createdBy || data.owner.id) : 'Unknown'
+            createdBy: data.createdBy || data.owner?._id || data.owner?.id
           };
           const response = await axios.post('http://localhost:5001/api/teams/request', payload);
-          const dbReq = response.data.teamRequest;
+          let dbReq = response.data.teamRequest;
           
-          const newReq = {
-            _id:           dbReq._id,
-            hackathonId:   String(data.hackathonId),
-            teamName:      data.teamName || '',
-            description:   data.description,
-            requiredRoles: data.requiredRoles || [],
-            requiredSkills: data.requiredSkills || [],
-            createdBy:     payload.createdBy,
-            currentMembers:[],
-            joinRequests:  [],
-            status:        'open',
-            createdAt:     dbReq.createdAt
-          }
-          set(state => ({ teamRequests: [newReq, ...state.teamRequests] }))
-          return newReq
+          // Format it to match the UI normalizer
+          const formattedDbReq = {
+            _id: dbReq._id || dbReq.id,
+            id: dbReq.id || dbReq._id,
+            hackathonId: dbReq.hackathonId || dbReq.eventId,
+            
+            title: dbReq.title,
+            description: dbReq.description || '',
+            requiredRoles: dbReq.rolesNeeded || dbReq.roles || [],
+            requiredSkills: dbReq.requiredSkills || dbReq.skills || [],
+            teamSizeLimit: dbReq.teamSizeLimit || 4,
+            status: dbReq.status || 'open',
+            createdBy: dbReq.createdBy,
+            owner: data.owner || undefined, // If the caller didn't pass owner, it might be blank temporarily until refresh
+            currentMembers: dbReq.currentMembers || [],
+            offlineMembers: dbReq.offlineMembers || []
+          };
+          
+          set(state => ({ teamRequests: [formattedDbReq, ...state.teamRequests] }))
+          return formattedDbReq;
         } catch (error) {
           console.error("Failed to post team request", error);
           throw error;
@@ -211,7 +218,7 @@ export const useHackathonStore = create(
           const payload = {
             teamRequestId: teamReq._id || teamReq.id,
             hackathonId: teamReq.hackathonId || 'unknown',
-            applicantId: sender?.id ? String(sender.id) : 'unknown',
+            applicantId: sender?._id || sender?.id ? String(sender._id || sender.id) : 'unknown',
             applicantName: sender?.name || 'Current User',
             applicantSkills: details.skills ? details.skills.split(',').map(s => s.trim()).filter(Boolean) : (sender?.skills || []),
             githubLink: details.github || '',
@@ -252,7 +259,7 @@ export const useHackathonStore = create(
             const prevOwnerNotifs = state.userNotifications[ownerId] || []
             const newNotif = {
               id:        Date.now().toString() + 'n',
-              text:      `${sender.name || 'Someone'} wants to join your team "${teamReq.teamName || teamReq.title || 'Untitled'}"`,
+              text:      `${sender.name || 'Someone'} wants to join your team "${teamReq.title}"`,
               type:      'join_request',
               read:      false,
               createdAt: new Date().toISOString(),
@@ -283,18 +290,43 @@ export const useHackathonStore = create(
           const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
           if (!jr) return;
           
-          await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
-          
-          // Refetch everything to ensure perfect consistency with MongoDB
-          await get().fetchHackathonData();
+          const response = await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
+          const { joinRequest: updatedJr, teamRequest: updatedTr } = response.data;
           
           set(state => {
-            const senderId = String(jr.sender?.id);
-            const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId));
+            let newJoinRequests = state.joinRequests.map(r =>
+              (String(r._id) === String(joinRequestId) || String(r.id) === String(joinRequestId)) ? updatedJr : r
+            );
+
+            let newTeamRequests = state.teamRequests;
+            if (updatedTr) {
+              const formattedTr = {
+                _id: updatedTr._id || updatedTr.id,
+                id: updatedTr.id || updatedTr._id,
+                hackathonId: updatedTr.hackathonId || updatedTr.eventId,
+                
+                title: updatedTr.title,
+                description: updatedTr.description || '',
+                requiredRoles: updatedTr.rolesNeeded || updatedTr.roles || [],
+                requiredSkills: updatedTr.requiredSkills || updatedTr.skills || [],
+                teamSizeLimit: updatedTr.teamSizeLimit || 4,
+                status: updatedTr.status || 'open',
+                createdBy: typeof updatedTr.createdBy === 'object' && updatedTr.createdBy !== null ? (updatedTr.createdBy._id || updatedTr.createdBy.id || 'unknown') : (updatedTr.createdBy || 'unknown'),
+                owner: typeof updatedTr.createdBy === 'object' && updatedTr.createdBy !== null ? updatedTr.createdBy : undefined,
+                currentMembers: updatedTr.currentMembers || [],
+                offlineMembers: updatedTr.offlineMembers || []
+              };
+              newTeamRequests = state.teamRequests.map(tr => 
+                (String(tr._id) === String(updatedTr._id) || String(tr.id) === String(updatedTr._id)) ? formattedTr : tr
+              );
+            }
+            
+            const senderId = String(jr.sender?.id || jr.applicantId);
+            const teamReq  = newTeamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId));
             const prevSenderNotifs = state.userNotifications[senderId] || [];
             const newNotif = {
               id:        Date.now().toString() + 'a',
-              text:      `✅ Your request to join "${teamReq?.teamName || teamReq?.title || 'the team'}" was accepted!`,
+              text:      `✅ Your request to join "${teamReq?.title}" was accepted!`,
               type:      'accepted',
               read:      false,
               createdAt: new Date().toISOString(),
@@ -302,6 +334,8 @@ export const useHackathonStore = create(
             };
 
             return {
+              joinRequests: newJoinRequests,
+              teamRequests: newTeamRequests,
               userNotifications: {
                 ...state.userNotifications,
                 [senderId]: [newNotif, ...prevSenderNotifs]
@@ -323,18 +357,20 @@ export const useHackathonStore = create(
           const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
           if (!jr) return;
 
-          await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
+          const response = await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
+          const { joinRequest: updatedJr } = response.data;
           
-          // Refetch everything to ensure perfect consistency with MongoDB
-          await get().fetchHackathonData();
-
           set(state => {
-            const senderId = String(jr.sender?.id);
+            let newJoinRequests = state.joinRequests.map(r =>
+              (String(r._id) === String(joinRequestId) || String(r.id) === String(joinRequestId)) ? updatedJr : r
+            );
+
+            const senderId = String(jr.sender?.id || jr.applicantId);
             const teamReq  = state.teamRequests.find(tr => String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId));
             const prevSenderNotifs = state.userNotifications[senderId] || [];
             const newNotif = {
               id:        Date.now().toString() + 'r',
-              text:      `❌ Your request to join "${teamReq?.teamName || teamReq?.title || 'the team'}" was not accepted.`,
+              text:      `❌ Your request to join "${teamReq?.title}" was not accepted.`,
               type:      'rejected',
               read:      false,
               createdAt: new Date().toISOString(),
@@ -342,6 +378,7 @@ export const useHackathonStore = create(
             };
 
             return {
+              joinRequests: newJoinRequests,
               userNotifications: {
                 ...state.userNotifications,
                 [senderId]: [newNotif, ...prevSenderNotifs]

@@ -5,6 +5,7 @@ import { useHackathonStore } from '../store/hackathonStore'
 import { useRecommendationStore } from '../store/recommendationStore'
 import { useAuthStore } from '../store/authStore'
 import { useRegistrationStore } from '../store/registrationStore'
+import { useAnalyticsStore } from '../store/analyticsStore'
 import Navbar from '../components/Navbar'
 import EventCard from '../components/EventCard'
 import EventCardSkeleton from '../components/EventCardSkeleton'
@@ -24,27 +25,30 @@ export default function StudentDashboard() {
   const { addNotification, user } = useAuthStore()
   const { reminders, removeReminder } = useCalendarStore()
   const { registrations, fetchStudentRegistrations } = useRegistrationStore()
+  const { studentAnalytics, fetchStudentAnalytics } = useAnalyticsStore()
   const [filter, setFilter] = useState({ category: 'all', search: '' })
   const [view, setView] = useState('list')
   
   useEffect(() => {
     fetchHackathonData?.()
-    if (user?.id || user?._id) {
-      fetchStudentRegistrations?.(user.id || user._id)
+    if (user?._id) {
+      fetchStudentRegistrations?.(user._id)
+      fetchStudentAnalytics?.()
     }
   }, [user])
   
   const myRegistrations = registrations.filter(r => {
     if (r.participationType === 'Individual') {
-      return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
+      return String(r.studentId?._id || r.studentId) === String(user?._id);
     }
     if (r.participationType === 'Team') {
       if (r.teamId) {
-        const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
-        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+        const isLead = String(r.teamId.createdBy) === String(user?._id);
+        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?._id));
         return isLead || isMember;
-      } else if (r.teamDetails) {
-        return (r.teamDetails.members || []).some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+      } else if (r.teamId) {
+        return [...(r.teamId.currentMembers || []), ...(r.teamId.offlineMembers || [])]
+          .some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
       }
     }
     return false;
@@ -65,7 +69,7 @@ export default function StudentDashboard() {
     jr.status === 'pending' && 
     (teamRequests || []).some(tr => 
       (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) && 
-      (String(tr.createdBy) === String(user?.id) || String(tr.createdBy) === String(user?._id))
+      (String(tr.createdBy) === String(user?._id) || String(tr.createdBy) === String(user?._id))
     )
   ).length;
 
@@ -112,25 +116,25 @@ export default function StudentDashboard() {
           <StatCard
             icon={Calendar}
             title="Registered Events"
-            value={registeredEvents.length}
+            value={studentAnalytics?.dashboard?.registeredEvents || 0}
             color="primary"
           />
           <StatCard
             icon={Trophy}
             title="Joined Hackathons"
-            value={joinedHackathonsCount}
+            value={studentAnalytics?.dashboard?.joinedHackathons || 0}
             color="green"
           />
           <StatCard
             icon={Users}
             title="Team Invitations"
-            value={teamInvitationsCount}
+            value={studentAnalytics?.dashboard?.teamInvitations || 0}
             color="purple"
           />
           <StatCard
             icon={Calendar}
             title="Upcoming Events"
-            value={upcomingEventsCount}
+            value={studentAnalytics?.dashboard?.upcomingEventsCount || 0}
             color="orange"
           />
         </div>

@@ -34,26 +34,17 @@ export default function ParticipantsModal({ event, onClose }) {
     } else {
       csvContent += "Team Name,Team Lead,Lead Email,Member Names,Member Emails,Team Size,Registration Date\n";
       teamRegs.forEach(reg => {
-        let teamName, lead, leadEmail, members, memberEmails, size;
-        if (reg.teamDetails) {
-          teamName = (reg.teamDetails.teamName || 'Unknown Team').replace(/,/g, ' ');
-          const leaderData = reg.teamDetails.members?.find(m => m.role === 'Leader') || reg.teamDetails.members?.[0];
-          const membersData = reg.teamDetails.members?.filter(m => m.role !== 'Leader') || [];
-          lead = (leaderData?.name || 'N/A').replace(/,/g, ' ');
-          leadEmail = (leaderData?.email || 'N/A').replace(/,/g, ' ');
-          members = membersData.map(m => m.name || m.email).join(' | ').replace(/,/g, ' ');
-          memberEmails = membersData.map(m => m.email).join(' | ').replace(/,/g, ' ');
-          size = reg.teamDetails.members?.length || 1;
-        } else {
-          teamName = (reg.teamId?.title || reg.teamId?.name || 'Unknown Team').replace(/,/g, ' ');
+        let title, lead, leadEmail, members, memberEmails, size;
+        
+          title = (reg.teamId?.title).replace(/,/g, ' ');
           lead = (reg.teamId?.createdBy?.name || 'N/A').replace(/,/g, ' ');
           leadEmail = (reg.teamId?.createdBy?.email || 'N/A').replace(/,/g, ' ');
-          members = (reg.teamId?.currentMembers || []).map(m => m.name || m.email).join(' | ').replace(/,/g, ' ');
-          memberEmails = (reg.teamId?.currentMembers || []).map(m => m.email).join(' | ').replace(/,/g, ' ');
+          members = [...(reg.teamId?.currentMembers || []), ...(reg.teamId?.offlineMembers || [])].map(m => m.name || m.email).join(' | ').replace(/,/g, ' ');
+          memberEmails = [...(reg.teamId?.currentMembers || []), ...(reg.teamId?.offlineMembers || [])].map(m => m.email).join(' | ').replace(/,/g, ' ');
           size = (reg.teamId?.currentMembers ? reg.teamId.currentMembers.length + 1 : 1);
-        }
+        
         const date = format(new Date(reg.createdAt), 'MMM dd yyyy');
-        csvContent += `${teamName},${lead},${leadEmail},${members},${memberEmails},${size},${date}\n`;
+        csvContent += `${title},${lead},${leadEmail},${members},${memberEmails},${size},${date}\n`;
       });
     }
     const encodedUri = encodeURI(csvContent);
@@ -74,7 +65,7 @@ export default function ParticipantsModal({ event, onClose }) {
             <p className="text-sm text-gray-500 mt-1">
               {event.title} • {
                 isTeamEvent 
-                  ? `${teamRegs.length} Teams • ${teamRegs.reduce((acc, r) => acc + 1 + (r.teamDetails ? r.teamDetails.members?.length - 1 : r.teamId?.currentMembers?.length || 0), 0) + individualRegs.length} Total Participants`
+                  ? `${teamRegs.length} Teams • ${teamRegs.reduce((acc, r) => acc + (r.teamId?.calculatedTeamSize || 1), 0) + individualRegs.length} Total Participants`
                   : `${individualRegs.length} Registered Students`
               }
             </p>
@@ -119,18 +110,18 @@ export default function ParticipantsModal({ event, onClose }) {
                         <tbody className="divide-y divide-gray-100">
                           {teamRegs.map(reg => (
                             <tr key={reg._id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-gray-800">{reg.teamDetails?.teamName || reg.teamId?.title || reg.teamId?.name || 'Unknown Team'}</td>
+                              <td className="px-6 py-4 font-medium text-gray-800">{reg.teamId?.title}</td>
                               <td className="px-6 py-4">
-                                <div className="font-medium">{reg.teamDetails ? (reg.teamDetails.members?.find(m => m.role === 'Leader')?.name || 'N/A') : (reg.teamId?.createdBy?.name || 'N/A')}</div>
+                                <div className="font-medium">{reg.teamId?.createdBy?.name}</div>
                               </td>
                               <td className="px-6 py-4 text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Mail size={14} className="text-gray-400" />
-                                  {reg.teamDetails ? (reg.teamDetails.members?.find(m => m.role === 'Leader')?.email || 'N/A') : (reg.teamId?.createdBy?.email || 'N/A')}
+                                  {reg.teamId?.createdBy?.email}
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-gray-600">
-                                {reg.teamDetails ? (reg.teamDetails.members?.length || 1) : (reg.teamId?.currentMembers ? reg.teamId.currentMembers.length + 1 : 1)}
+                                {reg.teamId?.calculatedTeamSize}
                               </td>
                               <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                 {format(new Date(reg.createdAt), 'MMM dd, yyyy')}
@@ -237,7 +228,7 @@ export default function ParticipantsModal({ event, onClose }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <p className="text-sm text-gray-500 mb-1">Team Name</p>
-                  <p className="font-semibold text-gray-800">{selectedTeam.teamDetails?.teamName || selectedTeam.teamId?.title || selectedTeam.teamId?.name || 'Unknown Team'}</p>
+                  <p className="font-semibold text-gray-800">{selectedTeam.teamId?.title}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <p className="text-sm text-gray-500 mb-1">Registration Date</p>
@@ -245,7 +236,7 @@ export default function ParticipantsModal({ event, onClose }) {
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <p className="text-sm text-gray-500 mb-1">Team Size</p>
-                  <p className="font-semibold text-gray-800">{selectedTeam.teamDetails ? selectedTeam.teamDetails.members?.length || 1 : selectedTeam.teamId?.currentMembers ? selectedTeam.teamId.currentMembers.length + 1 : 1} Members</p>
+                  <p className="font-semibold text-gray-800">{selectedTeam.teamId?.calculatedTeamSize} Members</p>
                 </div>
               </div>
 
@@ -253,24 +244,24 @@ export default function ParticipantsModal({ event, onClose }) {
                 <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Lead</h4>
                 <div className="flex flex-col gap-2 p-3 bg-primary-50 rounded-lg border border-primary-100">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-primary-900">{selectedTeam.teamDetails ? (selectedTeam.teamDetails.members?.find(m => m.role === 'Leader')?.name || 'N/A') : (selectedTeam.teamId?.createdBy?.name || 'N/A')}</span>
+                    <span className="font-medium text-primary-900">{selectedTeam.teamId?.createdBy?.name}</span>
                     <div className="flex items-center gap-2 text-primary-700 text-sm">
                       <Mail size={14} />
-                      {selectedTeam.teamDetails ? (selectedTeam.teamDetails.members?.find(m => m.role === 'Leader')?.email || 'N/A') : (selectedTeam.teamId?.createdBy?.email || 'N/A')}
+                      {selectedTeam.teamId?.createdBy?.email}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-primary-700 text-sm">
                     <Phone size={14} />
-                    {selectedTeam.teamDetails ? (selectedTeam.teamDetails.members?.find(m => m.role === 'Leader')?.phone || 'Phone: —') : (selectedTeam.teamId?.createdBy?.phone ? selectedTeam.teamId.createdBy.phone : 'Phone: —')}
+                    {selectedTeam.teamId?.createdBy?.phone || 'Phone: —'}
                   </div>
                 </div>
               </div>
 
               <div>
                 <h4 className="font-semibold text-gray-700 mb-3 border-b border-gray-100 pb-2">Team Members</h4>
-                {(selectedTeam.teamDetails ? (selectedTeam.teamDetails.members?.filter(m => m.role !== 'Leader') || []) : (selectedTeam.teamId?.currentMembers || [])).length > 0 ? (
+                {[...(selectedTeam.teamId?.currentMembers || []), ...(selectedTeam.teamId?.offlineMembers || [])].length > 0 ? (
                   <ul className="space-y-3">
-                    {(selectedTeam.teamDetails ? (selectedTeam.teamDetails.members?.filter(m => m.role !== 'Leader') || []) : (selectedTeam.teamId?.currentMembers || [])).map((m, idx) => (
+                    {[...(selectedTeam.teamId?.currentMembers || []), ...(selectedTeam.teamId?.offlineMembers || [])].map((m, idx) => (
                       <li key={idx} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">

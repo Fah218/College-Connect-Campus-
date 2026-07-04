@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
+import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
 import { useRegistrationStore } from '../store/registrationStore'
@@ -96,10 +97,10 @@ export default function AdminDashboard() {
         
         {/* Stats */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <StatCard icon={Calendar} title="Total Events" value={events.length} color="primary" />
-          <StatCard icon={CheckCircle} title="Approved" value={approvedEvents.length} color="green" />
-          <StatCard icon={Users} title="Total Registrations" value={adminStats.totalRegistrations} color="blue" />
-          <StatCard icon={Users} title="Total Participants" value={adminStats.totalParticipants} color="purple" />
+          <StatCard icon={Calendar} title="Total Events" value={adminAnalytics?.dashboard?.totalEvents || 0} color="primary" />
+          <StatCard icon={CheckCircle} title="Approved" value={adminAnalytics?.dashboard?.approved || 0} color="green" />
+          <StatCard icon={Users} title="Total Registrations" value={adminAnalytics?.dashboard?.totalRegistrations || 0} color="blue" />
+          <StatCard icon={Users} title="Total Participants" value={adminAnalytics?.dashboard?.totalParticipants || 0} color="purple" />
           <StatCard icon={Users} title="Registered Teams" value={adminStats.teamRegs} color="orange" />
         </div>
         

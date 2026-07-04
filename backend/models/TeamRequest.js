@@ -7,7 +7,7 @@ const teamRequestSchema = new mongoose.Schema({
     required: true
   },
   createdBy: {
-    type: String, // Using String to prevent CastError with current mock IDs
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Student",
     required: true
   },
@@ -34,7 +34,14 @@ const teamRequestSchema = new mongoose.Schema({
     default: 4
   },
   currentMembers: [{
-    type: mongoose.Schema.Types.Mixed
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Student"
+  }],
+  offlineMembers: [{
+    name: String,
+    email: String,
+    phone: String,
+    joinedVia: String
   }],
   status: {
     type: String,

@@ -9,6 +9,7 @@ import eventRoutes from './routes/eventRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import clubRoutes from './routes/clubRoutes.js';
 import registrationRoutes from './routes/registrationRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/clubs', clubRoutes);
 app.use('/api/registrations', registrationRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {

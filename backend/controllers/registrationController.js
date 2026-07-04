@@ -2,6 +2,8 @@ import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import TeamRequest from '../models/TeamRequest.js';
 import mongoose from 'mongoose';
+import Student from '../models/Student.js';
+
 
 // @desc    Register for an event
 // @route   POST /api/registrations
@@ -253,18 +255,54 @@ export const getEventRegistrations = async (req, res) => {
       return res.status(200).json({ registrations: [] });
     }
     
-    const registrations = await Registration.find({ eventId })
+    const rawRegistrations = await Registration.find({ eventId })
       .populate('studentId', 'name email department year rollNumber phone')
-      .populate({
-        path: 'teamId',
-        populate: [
-          { path: 'createdBy', select: 'name email department' }
-          // currentMembers is usually mixed type without direct ref, so we rely on data within it
-        ]
-      })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.status(200).json({ registrations });
+    const processedRegistrations = await Promise.all(rawRegistrations.map(async (reg) => {
+      if (reg.participationType === 'Team' && reg.teamId) {
+        try {
+
+          console.log("----- REGISTRATION AUDIT -----");
+          console.log("registration._id:", reg._id);
+          console.log("registration.teamId:", reg.teamId);
+          console.log("typeof registration.teamId:", typeof reg.teamId);
+          
+          const teamReq = await TeamRequest.findById(reg.teamId)
+
+            .populate('createdBy', 'name email phone department rollNumber')
+            .populate('currentMembers', 'name email phone department rollNumber')
+            .lean();
+          
+
+          console.log("Result of TeamRequest.findById:", teamReq ? (teamReq._id + " (Found)") : "NULL");
+          
+          if (teamReq) {
+            const allMembers = [...(teamReq.currentMembers || []), ...(teamReq.offlineMembers || [])];
+
+            reg.teamId = {
+              _id: teamReq._id,
+              title: teamReq.title,
+              status: teamReq.status,
+              createdBy: teamReq.createdBy,
+              currentMembers: allMembers,
+              calculatedTeamSize: 1 + allMembers.length
+            };
+            console.log("Reassigned reg.teamId? YES");
+          } else {
+            console.log("Reassigned reg.teamId? NO, teamReq is null");
+          }
+
+        } catch (err) {
+          console.error(`Error populating team ${reg.teamId} for registration ${reg._id}:`, err);
+
+        }
+      }
+      return reg;
+    }));
+
+    res.status(200).json({ registrations: processedRegistrations });
   } catch (error) {
     console.error('Error fetching event registrations:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });

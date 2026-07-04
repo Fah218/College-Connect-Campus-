@@ -14,8 +14,8 @@ export default function Navbar() {
 
   // Global Sync: Hackathon Store Notifs -> Auth Store Navbar Bell
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) return
-    const allNotifs = store.getUserNotifications?.(user.id) || []
+    if (!isAuthenticated || !user?._id) return
+    const allNotifs = store.getUserNotifications?.(user._id) || []
     if (allNotifs.length === 0) return
 
     allNotifs.forEach(n => {
@@ -27,10 +27,10 @@ export default function Navbar() {
           priority: 'high',
           id: n.id
         })
-        store.markUserNotifRead?.(user.id, n.id)
+        store.markUserNotifRead?.(user._id, n.id)
       }
     })
-  }, [store.userNotifications, user?.id, isAuthenticated])
+  }, [store.userNotifications, user?._id, isAuthenticated])
 
   const handleLogout = () => {
 

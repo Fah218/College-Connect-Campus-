@@ -2,17 +2,17 @@ import mongoose from 'mongoose';
 
 const joinRequestSchema = new mongoose.Schema({
   teamRequestId: {
-    type: String, // String to prevent CastError with current mock IDs
+    type: mongoose.Schema.Types.ObjectId,
     ref: "TeamRequest",
     required: true
   },
   hackathonId: {
-    type: String, // String to prevent CastError
-    ref: "Hackathon",
+    type: String, // String to prevent CastError if 'unknown' or mock ID
+    ref: "Event",
     required: true
   },
   applicantId: {
-    type: String, // using String to avoid cast errors with mock data
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Student",
     required: true
   },

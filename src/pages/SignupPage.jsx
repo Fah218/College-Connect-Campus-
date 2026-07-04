@@ -81,6 +81,7 @@ export default function SignupPage() {
 
       login({
         id: response.data.user._id,
+        _id: response.data.user._id,
         name: response.data.user.name,
         email: response.data.user.email,
         role: formData.role,

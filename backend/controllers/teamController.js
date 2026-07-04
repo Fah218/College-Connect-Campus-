@@ -3,8 +3,10 @@ import JoinRequest from '../models/JoinRequest.js';
 import Student from '../models/Student.js';
 
 export const createTeamRequest = async (req, res) => {
+  console.log("=== createTeamRequest TRIGGERED ===");
+  console.log("Payload:", req.body);
   try {
-    const { hackathonId, createdBy, title, description, rolesNeeded, requiredSkills, preferredExperienceLevel, teamSizeLimit, currentMembers, status } = req.body;
+    const { hackathonId, createdBy, title, description, rolesNeeded, requiredSkills, preferredExperienceLevel, teamSizeLimit, currentMembers, offlineMembers, status } = req.body;
     
     // Check if user already has an active team request for this hackathon
     const existingRequest = await TeamRequest.findOne({ hackathonId, createdBy, status: { $in: ['open', 'full'] } });
@@ -25,18 +27,24 @@ export const createTeamRequest = async (req, res) => {
       preferredExperienceLevel: preferredExperienceLevel || undefined,
       teamSizeLimit: teamSizeLimit || 4,
       currentMembers: currentMembers || [],
+      offlineMembers: offlineMembers || [],
       status: status || 'open'
     });
     
     await newTeamRequest.save();
     
+    const populatedRequest = await TeamRequest.findById(newTeamRequest._id)
+      .populate('createdBy', 'name email department phone rollNumber')
+      .populate('currentMembers', 'name email department phone rollNumber');
+
     res.status(201).json({
       success: true,
       message: 'Team request created successfully',
-      teamRequest: newTeamRequest
+      teamRequest: populatedRequest
     });
   } catch (error) {
     console.error('Error creating team request:', error);
+    console.error('Validation errors:', error.errors);
     res.status(500).json({
       success: false,
       message: 'Failed to create team request',
@@ -48,7 +56,7 @@ export const createTeamRequest = async (req, res) => {
 export const updateTeamRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, teamName, description, rolesNeeded, roles, requiredSkills, skills, preferredExperienceLevel, teamSizeLimit, currentMembers } = req.body;
+    const { title, teamName, description, rolesNeeded, roles, requiredSkills, skills, preferredExperienceLevel, teamSizeLimit, currentMembers, offlineMembers } = req.body;
     
     const teamRequest = await TeamRequest.findById(id);
     if (!teamRequest) {
@@ -76,12 +84,17 @@ export const updateTeamRequest = async (req, res) => {
     }
     if (teamSizeLimit !== undefined) teamRequest.teamSizeLimit = teamSizeLimit;
     if (currentMembers !== undefined) teamRequest.currentMembers = currentMembers;
+    if (offlineMembers !== undefined) teamRequest.offlineMembers = offlineMembers;
     
     await teamRequest.save();
     
+    const populatedRequest = await TeamRequest.findById(teamRequest._id)
+      .populate('createdBy', 'name email department phone rollNumber')
+      .populate('currentMembers', 'name email department phone rollNumber');
+
     res.status(200).json({
       success: true,
-      data: teamRequest,
+      data: populatedRequest,
       message: 'Team request updated successfully'
     });
   } catch (error) {
@@ -121,7 +134,9 @@ export const getTeamRequests = async (req, res) => {
     const { hackathonId } = req.query;
     const query = hackathonId ? { hackathonId } : {};
     
-    const teamRequests = await TeamRequest.find(query);
+    const teamRequests = await TeamRequest.find(query)
+      .populate('createdBy', 'name email department phone rollNumber')
+      .populate('currentMembers', 'name email department phone rollNumber');
     
     res.status(200).json({
       success: true,
@@ -137,6 +152,8 @@ export const getTeamRequests = async (req, res) => {
 };
 
 export const createJoinRequest = async (req, res) => {
+  console.log("=== createJoinRequest TRIGGERED ===");
+  console.log("Payload:", req.body);
   try {
     const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
     
@@ -192,6 +209,7 @@ export const createJoinRequest = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating join request:', error);
+    console.error('Validation errors:', error.errors);
     res.status(500).json({
       success: false,
       message: 'Failed to create join request',
@@ -207,7 +225,8 @@ export const getJoinRequests = async (req, res) => {
     if (hackathonId) query.hackathonId = hackathonId;
     if (teamRequestId) query.teamRequestId = teamRequestId;
     
-    const joinRequests = await JoinRequest.find(query);
+    const joinRequests = await JoinRequest.find(query)
+      .populate('applicantId', 'name email department phone');
     
     res.status(200).json({
       success: true,
@@ -253,7 +272,7 @@ export const updateJoinRequestStatus = async (req, res) => {
       if (teamRequest) {
         // add applicant if not already in members
         const isMember = teamRequest.currentMembers.some(
-          member => String(member.id) === String(joinRequest.applicantId)
+          member => String(member) === String(joinRequest.applicantId) || (member._id && String(member._id) === String(joinRequest.applicantId))
         );
         
         if (!isMember) {
@@ -269,16 +288,8 @@ export const updateJoinRequestStatus = async (req, res) => {
 
           const studentProfile = await Student.findById(joinRequest.applicantId);
           
-          teamRequest.currentMembers.push({
-            id: joinRequest.applicantId,
-            name: studentProfile ? studentProfile.name : joinRequest.applicantName,
-            email: studentProfile ? studentProfile.email : undefined,
-            phone: studentProfile ? studentProfile.phone : undefined,
-            department: studentProfile ? studentProfile.department : undefined,
-            year: studentProfile ? studentProfile.year : undefined,
-            skills: joinRequest.applicantSkills || [],
-            joinedVia: 'online'
-          });
+          // Normalized logic: push just the ObjectID to reference the Student
+          teamRequest.currentMembers.push(joinRequest.applicantId);
           
           // Check if full after adding
           if (teamRequest.currentMembers.length + 1 >= teamRequest.teamSizeLimit) {
@@ -309,10 +320,19 @@ export const updateJoinRequestStatus = async (req, res) => {
       }
     }
 
+    // Fetch populated team request to return for immediate frontend synchronization
+    let updatedTeamRequest = null;
+    if (joinRequest.teamRequestId) {
+      updatedTeamRequest = await TeamRequest.findById(joinRequest.teamRequestId)
+        .populate('createdBy', 'name email department phone rollNumber')
+        .populate('currentMembers', 'name email department phone rollNumber');
+    }
+
     res.status(200).json({
       success: true,
       message: `Join request ${status} successfully`,
-      joinRequest
+      joinRequest,
+      teamRequest: updatedTeamRequest
     });
   } catch (error) {
     console.error('Error updating join request:', error);

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, Calendar, CheckCircle, Clock, XCircle, Users, Trophy, TrendingUp, Edit } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuthStore } from '../store/authStore'
 import { useEventStore } from '../store/eventStore'
+import { useAnalyticsStore } from '../store/analyticsStore'
 import Navbar from '../components/Navbar'
 import ProfileEditForm from '../components/ProfileEditForm'
 import { format } from 'date-fns'
@@ -10,8 +11,12 @@ import { format } from 'date-fns'
 export default function ClubHeadProfilePage() {
   const { user } = useAuthStore()
   const { events } = useEventStore()
+  const { clubHeadAnalytics, fetchClubHeadAnalytics } = useAnalyticsStore()
   const [isEditing, setIsEditing] = useState(false)
   
+  useEffect(() => {
+    fetchClubHeadAnalytics?.()
+  }, [])
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
   
   const myEvents = events.filter(e => {

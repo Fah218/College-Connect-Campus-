@@ -66,10 +66,10 @@ export default function HackathonTeammateFinder() {
   }
 
   const allRequests = store.getTeamRequestsForHackathon?.(h.id) || []
-  const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user.id || user._id) : null
-  const myJoinReqs = user ? (store.getMyJoinRequests?.(user.id || user._id) || []).filter(j => String(j.hackathonId) === String(h.id)) : []
+  const myTeam = user ? store.getMyTeamForHackathon?.(h.id, user._id) : null
+  const myJoinReqs = user ? (store.getMyJoinRequests?.(user._id) || []).filter(j => String(j.hackathonId) === String(h.id)) : []
   
-  const isTeamOwner = myTeam && user && String(myTeam.createdBy) === String(user.id);
+  const isTeamOwner = myTeam && user && String(myTeam.createdBy) === String(user._id);
 
   const teamInbox = isTeamOwner ? (store.joinRequests || []).filter(jr => 
     String(jr.teamRequestId) === String(myTeam._id) || String(jr.teamRequestId) === String(myTeam.id)
@@ -82,7 +82,7 @@ export default function HackathonTeammateFinder() {
     if (!isAuthenticated) { navigate('/login'); return }
     const msg = joinMsg[reqId] || ''
     store.sendJoinRequest?.(reqId, {
-      id: user.id, name: user.name, email: user.email,
+      id: user._id, name: user.name, email: user.email,
       skills: user.skills || [], department: user.department, year: user.year
     }, msg, details)
     addNotification({ title: 'Request Sent', message: 'Join request sent!', priority: 'medium' })
@@ -123,7 +123,7 @@ export default function HackathonTeammateFinder() {
 
   // Apply User Filters
   const filteredRequests = activeRequests.filter(req => {
-    const matchesSearch = (req.teamName || req.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = (req.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (req.description || '').toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesRole = roleFilter === '' || (req.requiredRoles || []).some(r => r.role === roleFilter)
@@ -161,7 +161,7 @@ export default function HackathonTeammateFinder() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">My Team</h2>
-                    <p className="text-sm text-gray-500">{myTeam.teamName || 'Untitled Team'}</p>
+                    <p className="text-sm text-gray-500">{myTeam.title}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isTeamOwner && myTeam.status === 'open' ? (
@@ -195,9 +195,12 @@ export default function HackathonTeammateFinder() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between bg-gray-50 border rounded-lg p-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-bold">L</div>
+                      <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-bold">
+                        {String(myTeam.owner?.name || myTeam.createdBy?.name || '?').charAt(0)}
+                      </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-800">Team Lead</p>
+                        <p className="text-sm font-bold text-gray-800">{String(myTeam.owner?.name || myTeam.createdBy?.name || 'Unknown Lead')}</p>
+                        <p className="text-xs text-gray-500">{String(myTeam.owner?.email || myTeam.createdBy?.email || '')}</p>
                       </div>
                     </div>
                     <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold uppercase">Lead</span>
@@ -347,15 +350,15 @@ export default function HackathonTeammateFinder() {
               ) : filteredRequests.map(req => {
                 const memberCount = (req.currentMembers || []).length + 1;
                 const reqTeamSizeLimit = req.teamSizeLimit || hMaxTeamSize;
-                const isOwner = user?.id && req.createdBy && String(req.createdBy) === String(user.id)
-                const isMember = user?.id && (req.currentMembers || []).some(m => m && String(m.id || m._id || '') === String(user.id))
-                const myJR = user?.id && myJoinReqs.find(j => String(j.teamRequestId) === String(req._id) || String(j.teamRequestId) === String(req.id))
+                const isOwner = user?._id && req.createdBy && String(req.createdBy) === String(user._id)
+                const isMember = user?._id && (req.currentMembers || []).some(m => m && String(m.id || m._id || '') === String(user._id))
+                const myJR = user?._id && myJoinReqs.find(j => String(j.teamRequestId) === String(req._id) || String(j.teamRequestId) === String(req.id))
 
                 return (
                   <div key={req._id} className="bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">{String(req.teamName || req.title || 'Unnamed Team')}</h3>
+                        <h3 className="text-xl font-bold text-gray-900">{String(req.title)}</h3>
                         <p className="text-sm font-semibold text-primary-600 mt-1">{memberCount} / {reqTeamSizeLimit} Members</p>
                       </div>
                     </div>
@@ -460,7 +463,7 @@ export default function HackathonTeammateFinder() {
           onClose={() => setShowPostForm(false)}
           onSubmit={async (data) => {
             try {
-              await store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user.id });
+              await store.addTeamRequest({ ...data, hackathonId: h.id, createdBy: user._id, owner: user });
               addNotification({ title: 'Request Posted', message: 'Your team request is live!', priority: 'medium' });
               setShowPostForm(false);
             } catch (err) {
@@ -492,7 +495,7 @@ export default function HackathonTeammateFinder() {
 
 function PostRequestModal({ onClose, onSubmit, hMaxTeamSize, initialData }) {
   const [form, setForm] = useState({
-    teamName: initialData?.teamName || initialData?.title || '',
+    title: initialData?.title || '',
     description: initialData?.description || '',
     requiredRoles: initialData?.rolesNeeded || initialData?.roles || [],
     requiredSkills: initialData?.requiredSkills || initialData?.skills || [],
@@ -534,7 +537,7 @@ function PostRequestModal({ onClose, onSubmit, hMaxTeamSize, initialData }) {
   }
 
   const handleSubmit = () => {
-    if (!form.teamName.trim()) {
+    if (!form.title.trim()) {
       alert("Team Name is required.");
       return;
     }
@@ -583,8 +586,8 @@ function PostRequestModal({ onClose, onSubmit, hMaxTeamSize, initialData }) {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Team Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  value={form.teamName}
-                  onChange={e => setForm({ ...form, teamName: e.target.value })}
+                  value={form.title}
+                  onChange={e => setForm({ ...form, title: e.target.value })}
                   placeholder="e.g. Code Wizards"
                   className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900"
                   required

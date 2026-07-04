@@ -1,15 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { User, Award, Calendar, Users, Edit } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useEventStore } from '../store/eventStore'
+import { useAnalyticsStore } from '../store/analyticsStore'
 import Navbar from '../components/Navbar'
 import ProfileEditForm from '../components/ProfileEditForm'
 
 export default function StudentProfilePage() {
   const { user } = useAuthStore()
-  const { events, registeredEvents } = useEventStore()
+  const { events, registeredEvents, fetchStudentRegistrations } = useEventStore()
+  const { studentAnalytics, fetchStudentAnalytics } = useAnalyticsStore()
   const [isEditing, setIsEditing] = useState(false)
+  
+  useEffect(() => {
+    fetchStudentRegistrations?.(user?._id)
+    fetchStudentAnalytics?.()
+  }, [user])
   
   // 1. Skill Proficiency
   const skillData = user?.skills?.length > 0 
@@ -33,8 +40,11 @@ export default function StudentProfilePage() {
   // 3. Event Participation History
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const participationCounts = {}
-  userEvents.forEach(e => {
-    const d = new Date(e.date || e.startDate)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  
+  const history = studentAnalytics?.profile?.eventHistory || []
+  history.forEach(reg => {
+    const d = new Date(reg.createdAt || reg.eventId?.date)
     if (!isNaN(d.getTime())) {
       const month = months[d.getMonth()]
       participationCounts[month] = (participationCounts[month] || 0) + 1
@@ -43,15 +53,10 @@ export default function StudentProfilePage() {
   
   const participationData = Object.keys(participationCounts).length > 0
     ? Object.keys(participationCounts).map(month => ({ month, events: participationCounts[month] }))
-    : [
-        { month: 'Sep', events: 3 },
-        { month: 'Oct', events: 5 },
-        { month: 'Nov', events: 4 },
-        { month: 'Dec', events: 6 }
-      ]
+    : []
 
   // 4. Clubs Interaction
-  const uniqueClubs = [...new Set(userEvents.map(e => e.club).filter(Boolean))]
+  const uniqueClubs = Array.from({ length: studentAnalytics?.profile?.distinctClubsCount || 0 }).map((_, i) => 'Club ' + (i+1)); // Using count for UI if names aren't provided by old code. Actually, let's keep userEvents logic for names.
 
   // 5. Hackathon Experience
   const hackathons = userEvents.filter(e => e.category === 'Hackathon')
@@ -151,9 +156,9 @@ export default function StudentProfilePage() {
             
             {/* Stats Grid */}
             <div className="grid md:grid-cols-3 gap-4">
-              <StatBox icon={Calendar} label="Events Registered" value={userEvents.length.toString()} color="blue" />
-              <StatBox icon={Award} label="Events Attended" value={attendedEvents.length.toString()} color="green" />
-              <StatBox icon={Users} label="Upcoming Events" value={upcomingEvents.length.toString()} color="purple" />
+              <StatBox icon={Calendar} label="Events Registered" value={studentAnalytics?.profile?.eventsRegistered?.toString() || '0'} color="blue" />
+              <StatBox icon={Award} label="Events Attended" value={studentAnalytics?.profile?.eventsAttended?.toString() || '0'} color="green" />
+              <StatBox icon={Users} label="Upcoming Events" value={studentAnalytics?.profile?.upcomingEventsCount?.toString() || '0'} color="purple" />
             </div>
             
             {/* Clubs Interaction */}

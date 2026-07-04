@@ -82,8 +82,8 @@ export default function EventRegistrationPage() {
   }, [event])
 
   useEffect(() => {
-    if (user?.id || user?._id) {
-      fetchStudentRegistrations(user.id || user._id)
+    if (user?._id) {
+      fetchStudentRegistrations(user._id)
     }
   }, [user])
 
@@ -98,27 +98,29 @@ export default function EventRegistrationPage() {
 
   // Find user's team for this event
   const myTeam = teamRequests?.find(tr => {
-    const isOwner = String(tr.createdBy) === String(user?.id || user?._id);
-    const isMember = (tr.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+    const isOwner = String(tr.createdBy) === String(user?._id);
+    const isMember = (tr.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?._id));
     return String(tr.hackathonId) === String(event.id || event._id) && (isOwner || isMember);
   });
 
-  const isTeamLead = myTeam && String(myTeam.createdBy) === String(user?.id || user?._id);
-  const currentTeamSize = myTeam ? 1 + (myTeam.currentMembers?.length || 0) : 0;
+  const isTeamLead = myTeam && String(myTeam.createdBy) === String(user?._id);
+  const allTeamMembers = myTeam ? [...(myTeam.currentMembers || []), ...(myTeam.offlineMembers || [])] : [];
+  const currentTeamSize = myTeam ? 1 + allTeamMembers.length : 0;
   const isTeamSizeValid = myTeam && currentTeamSize >= (event.teamSizeMin || 1) && currentTeamSize <= (event.maxTeamSize || 99);
   
   const isRegisteredBackend = registrations.some(r => {
     if (String(r.eventId?._id || r.eventId) !== String(event?.id || event?._id)) return false;
     if (r.participationType === 'Individual') {
-      return String(r.studentId?._id || r.studentId) === String(user?.id || user?._id);
+      return String(r.studentId?._id || r.studentId) === String(user?._id);
     }
     if (r.participationType === 'Team') {
       if (r.teamId) {
-        const isLead = String(r.teamId.createdBy) === String(user?.id || user?._id);
-        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?.id || user?._id));
+        const isLead = String(r.teamId.createdBy) === String(user?._id);
+        const isMember = (r.teamId.currentMembers || []).some(m => String(m.id || m._id || m) === String(user?._id));
         return isLead || isMember;
-      } else if (r.teamDetails) {
-        return (r.teamDetails.members || []).some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+      } else if (r.teamId) {
+        return [...(r.teamId.currentMembers || []), ...(r.teamId.offlineMembers || [])]
+          .some(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
       }
     }
     return false;
@@ -132,7 +134,7 @@ export default function EventRegistrationPage() {
     setLoading(true)
     setErrorMsg('')
     try {
-      await registerIndividual(event._id || event.id, formData, user?.id || user?._id)
+      await registerIndividual(event._id || event.id, formData, user?._id)
       setSuccess(true)
       addNotification({ title: 'Registration Successful!', message: `You have been registered for ${event.title}`, priority: 'high' })
       setTimeout(() => navigate('/student'), 2000)
@@ -151,9 +153,9 @@ export default function EventRegistrationPage() {
     setLoading(true)
     setErrorMsg('')
     try {
-      await registerTeam(event._id || event.id, myTeam._id || myTeam.id, user?.id || user?._id)
+      await registerTeam(event._id || event.id, myTeam._id || myTeam.id, user?._id)
       setSuccess(true)
-      addNotification({ title: 'Team Registered!', message: `Your team ${myTeam.title || myTeam.teamName} has been registered!`, priority: 'high' })
+      addNotification({ title: 'Team Registered!', message: `Your team ${myTeam.title} has been registered!`, priority: 'high' })
       setTimeout(() => navigate('/student'), 2000)
     } catch (err) {
       setErrorMsg(err.response?.data?.message || err.message || 'Registration failed')
@@ -166,7 +168,7 @@ export default function EventRegistrationPage() {
     if (!inlineMember.name.trim() || !inlineMember.email.trim()) {
       return setErrorMsg('Full Name and Email are required.')
     }
-    const allEmails = [user?.email, ...(myTeam.currentMembers || []).map(m => m.email), inlineMember.email].map(e => (e || '').toLowerCase().trim())
+    const allEmails = [user?.email, ...allTeamMembers.map(m => m.email), inlineMember.email].map(e => (e || '').toLowerCase().trim())
     const uniqueEmails = new Set(allEmails)
     if (uniqueEmails.size !== allEmails.length) {
       return setErrorMsg('Duplicate emails are not allowed.')
@@ -184,7 +186,7 @@ export default function EventRegistrationPage() {
       }
       
       await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
-        currentMembers: [...(myTeam.currentMembers || []), newMember]
+        offlineMembers: [...(myTeam.offlineMembers || []), newMember]
       })
       await fetchHackathonData()
       setInlineMember({ name: '', email: '', phone: '' })
@@ -200,10 +202,14 @@ export default function EventRegistrationPage() {
     setLoading(true)
     setErrorMsg('')
     try {
-      const updatedMembers = (myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId)
-      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
-        currentMembers: updatedMembers
-      })
+      const isOffline = typeof memberId === 'string' && memberId.startsWith('offline_');
+      let payload = {};
+      if (isOffline) {
+        payload.offlineMembers = (myTeam.offlineMembers || []).filter(m => m.id !== memberId && m._id !== memberId);
+      } else {
+        payload.currentMembers = (myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId);
+      }
+      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, payload)
       await fetchHackathonData()
     } catch (err) {
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to remove member')
@@ -218,7 +224,7 @@ export default function EventRegistrationPage() {
     }
     
     // Check duplicates, excluding the current member being edited
-    const otherEmails = [user?.email, ...(myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId).map(m => m.email)].map(e => (e || '').toLowerCase().trim())
+    const otherEmails = [user?.email, ...allTeamMembers.filter(m => m.id !== memberId && m._id !== memberId).map(m => m.email)].map(e => (e || '').toLowerCase().trim())
     if (otherEmails.includes(editMemberData.email.toLowerCase().trim())) {
       return setErrorMsg('Duplicate emails are not allowed.')
     }
@@ -226,8 +232,11 @@ export default function EventRegistrationPage() {
     setLoading(true)
     setErrorMsg('')
     try {
-      const updatedMembers = (myTeam.currentMembers || []).map(m => {
-        if (m.id === memberId || m._id === memberId) {
+      const isOffline = typeof memberId === 'string' && memberId.startsWith('offline_');
+      let payload = {};
+      if (isOffline) {
+        payload.offlineMembers = (myTeam.offlineMembers || []).map(m => {
+          if (m.id === memberId || m._id === memberId) {
           return {
             ...m,
             name: editMemberData.name.trim(),
@@ -235,12 +244,18 @@ export default function EventRegistrationPage() {
             phone: editMemberData.phone.trim() || undefined
           }
         }
-        return m
-      })
+          return m;
+        });
+      } else {
+        payload.currentMembers = (myTeam.currentMembers || []).map(m => {
+          if (m.id === memberId || m._id === memberId) {
+            return { ...m, name: editMemberData.name.trim(), email: editMemberData.email.trim(), phone: editMemberData.phone.trim() || undefined };
+          }
+          return m;
+        });
+      }
       
-      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
-        currentMembers: updatedMembers
-      })
+      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, payload)
       await fetchHackathonData()
       setEditingMemberId(null)
     } catch (err) {
@@ -291,11 +306,11 @@ export default function EventRegistrationPage() {
       }));
 
       const teamDetails = {
-        teamName: offlineTeamData.title.trim(),
+        title: offlineTeamData.title.trim(),
         members: [leader, ...members]
       };
 
-      await registerTeam(event.id || event._id, null, user?.id || user?._id, teamDetails);
+      await registerTeam(event.id || event._id, null, user?._id, teamDetails);
       setSuccess(true);
       setTimeout(() => navigate('/student-dashboard'), 2000);
     } catch (err) {
@@ -341,11 +356,12 @@ export default function EventRegistrationPage() {
       
       const payload = {
         hackathonId: event.id || event._id,
-        createdBy: user?.id || user?._id,
+        createdBy: user?._id,
         title: offlineTeamData.title,
         description: 'Offline Team',
         status: 'closed',
-        currentMembers
+        offlineMembers: currentMembers,
+        currentMembers: []
       }
 
       await axios.post('http://localhost:5001/api/teams/request', payload)
@@ -599,7 +615,7 @@ export default function EventRegistrationPage() {
                         <div className="flex justify-between items-start mb-6">
                           <div>
                             <p className="text-sm text-gray-500 uppercase tracking-wide font-bold">Your Team</p>
-                            <h3 className="text-2xl font-bold text-gray-900">{myTeam.title || myTeam.teamName}</h3>
+                            <h3 className="text-2xl font-bold text-gray-900">{myTeam.title}</h3>
                           </div>
                           <div className={`px-4 py-2 rounded-lg border font-bold text-sm ${isTeamSizeValid ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                             Size: {currentTeamSize} / {event.maxTeamSize}
@@ -614,7 +630,7 @@ export default function EventRegistrationPage() {
                               <span className="text-xs text-gray-500">{user?.email}</span>
                             </div>
                           </div>
-                          {(myTeam.currentMembers || []).map((m, i) => (
+                          {allTeamMembers.map((m, i) => (
                             <div key={i} className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm">
                               {editingMemberId === (m.id || m._id) ? (
                                 <div className="w-full">
