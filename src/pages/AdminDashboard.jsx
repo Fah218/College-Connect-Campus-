@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useEventStore } from '../store/eventStore'
-import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
@@ -17,7 +17,7 @@ import { format } from 'date-fns'
 
 export default function AdminDashboard() {
   const { events, approveEvent, rejectEvent, getAuditLogs } = useEventStore()
-  const { generateInsights } = useAnalyticsStore()
+  
   const { addNotification, user } = useAuthStore()
   const [selectedTab, setSelectedTab] = useState('approvals')
   const [viewingEvent, setViewingEvent] = useState(null)
@@ -46,7 +46,9 @@ export default function AdminDashboard() {
     fetchAdminStats?.()
   }, [])
   
-  const insights = generateInsights(events)
+    const { adminAnalytics } = useAnalyticsStore()
+  
+  
   const auditLogs = getAuditLogs()
   
   const handleApprove = (id) => {
@@ -70,23 +72,11 @@ export default function AdminDashboard() {
   const pendingEvents = events.filter(e => e.status === 'pending')
   const approvedEvents = events.filter(e => e.status === 'approved')
   
-  const clubData = events.reduce((acc, event) => {
-    acc[event.club] = (acc[event.club] || 0) + (event.attendees || 0)
-    return acc
-  }, {})
   
-  const chartData = Object.entries(clubData).map(([name, attendees]) => ({
-    name,
-    attendees
-  }))
   
-  const monthlyData = [
-    { month: 'Sep', events: 12 },
-    { month: 'Oct', events: 18 },
-    { month: 'Nov', events: 15 },
-    { month: 'Dec', events: 22 },
-    { month: 'Jan', events: 20 }
-  ]
+  
+  
+  
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,14 +91,14 @@ export default function AdminDashboard() {
           <StatCard icon={CheckCircle} title="Approved" value={adminAnalytics?.dashboard?.approved || 0} color="green" />
           <StatCard icon={Users} title="Total Registrations" value={adminAnalytics?.dashboard?.totalRegistrations || 0} color="blue" />
           <StatCard icon={Users} title="Total Participants" value={adminAnalytics?.dashboard?.totalParticipants || 0} color="purple" />
-          <StatCard icon={Users} title="Registered Teams" value={adminStats.teamRegs} color="orange" />
+          <StatCard icon={Users} title="Registered Teams" value={adminAnalytics?.dashboard?.registeredTeams || 0} color="orange" />
         </div>
         
         {/* Insights */}
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4">Platform Insights</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {insights.map(insight => (
+            {(adminAnalytics?.dashboard?.insights || []).map(insight => (
               <InsightCard key={insight.id} insight={insight} />
             ))}
           </div>
@@ -155,7 +145,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'analytics' && (
-              <AnalyticsSection chartData={chartData} monthlyData={monthlyData} events={events} />
+              <AnalyticsSection chartData={adminAnalytics?.dashboard?.chartData || []} monthlyData={adminAnalytics?.dashboard?.monthlyData || []} events={events} />
             )}
             
             {selectedTab === 'timeline' && (
@@ -167,7 +157,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'clubs' && (
-              <ClubSection events={events} clubHeads={clubHeads} onManage={setManagingClub} realClubs={realClubs} toggleArchiveStatus={toggleArchiveStatus} />
+              <ClubSection events={events} clubs={adminAnalytics?.dashboard?.clubs || []} clubHeads={clubHeads} onManage={setManagingClub} realClubs={realClubs} toggleArchiveStatus={toggleArchiveStatus} />
             )}
           </div>
         </div>
@@ -184,14 +174,7 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* Club Management Modal */}
-      {managingClub && (
-        <ClubManagementModal 
-          club={managingClub} 
-          onClose={() => setManagingClub(null)} 
-          toggleArchiveStatus={toggleArchiveStatus}
-        />
-      )}
+      {/* Club Management page uses routing instead of Modal */}
       {/* Image Modal (legacy fallback) */}
       {modalImageSrc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setModalImageSrc(null)}>
@@ -693,66 +676,15 @@ function AuditSection({ logs }) {
   )
 }
 
-function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStatus }) {
+function ClubSection({ clubs, onManage }) {
   const [showArchived, setShowArchived] = useState(false);
-  const clubMap = {};
   
-  (events || []).forEach(event => {
-    const clubName = event.club || event.clubName;
-    if (!clubName) return; // Skip if no club associated
+  const displayedClubs = showArchived ? clubs.filter(c => c.isArchived) : clubs.filter(c => !c.isArchived);
 
-    // Find the real club head from DB
-    const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === clubName.trim().toLowerCase());
-    const realHead = headObj ? headObj.name : 'Pending Assignment';
-
-    if (!clubMap[clubName]) {
-      clubMap[clubName] = {
-        id: clubName,
-        name: clubName,
-        head: realHead,
-        members: Math.floor(Math.random() * 40) + 20, // Mock member count
-        events: 0,
-        status: 'Active',
-        eventList: [],
-        isArchived: false,
-        realId: null
-      };
-    }
-    clubMap[clubName].events += 1;
-    clubMap[clubName].eventList.push(event);
-  });
-
-  (realClubs || []).forEach(rc => {
-    if (clubMap[rc.clubName]) {
-      clubMap[rc.clubName].isArchived = rc.isArchived;
-      clubMap[rc.clubName].realId = rc._id;
-      // also update the head in case the real club head loaded later but event matched first
-      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === rc.clubName.trim().toLowerCase());
-      if (headObj) clubMap[rc.clubName].head = headObj.name;
-    } else {
-      const headObj = (clubHeads || []).find(ch => ch.clubName && ch.clubName.trim().toLowerCase() === rc.clubName.trim().toLowerCase());
-      const realHead = headObj ? headObj.name : 'Pending Assignment';
-      clubMap[rc.clubName] = {
-        id: rc.clubName,
-        realId: rc._id,
-        name: rc.clubName,
-        head: realHead,
-        members: Math.floor(Math.random() * 40) + 20,
-        events: 0,
-        status: rc.active ? 'Active' : 'Inactive',
-        eventList: [],
-        isArchived: rc.isArchived
-      };
-    }
-  });
-
-  const allClubs = Object.values(clubMap);
-  const displayedClubs = showArchived ? allClubs.filter(c => c.isArchived) : allClubs.filter(c => !c.isArchived);
-
-  if (allClubs.length === 0) {
+  if (clubs.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-xl border">
-        <p className="text-gray-500 font-medium">No clubs found. Create an event to register a club.</p>
+        <p className="text-gray-500 font-medium">No clubs found.</p>
       </div>
     )
   }
@@ -787,8 +719,8 @@ function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStat
                 </td>
               </tr>
             ) : (
-              displayedClubs.map(club => (
-                <tr key={club.id}>
+              displayedClubs.map((club, idx) => (
+                <tr key={club.id || idx}>
               <td className="px-6 py-4 font-medium">{club.name}</td>
               <td className="px-6 py-4">{club.head}</td>
               <td className="px-6 py-4">{club.members}</td>
@@ -803,214 +735,18 @@ function ClubSection({ events, clubHeads, onManage, realClubs, toggleArchiveStat
                 </span>
               </td>
               <td className="px-6 py-4">
-                <button onClick={() => onManage(club)} className="text-primary-600 hover:text-primary-700 font-medium">Manage</button>
+                <Link
+                  to={`/admin/clubs/${club.name || club.id || idx}`}
+                  className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                >
+                  Manage
+                </Link>
               </td>
             </tr>
               ))
             )}
           </tbody>
         </table>
-      </div>
-    </div>
-  )
-}
-
-function ClubManagementModal({ club, onClose, toggleArchiveStatus }) {
-  const [activeTab, setActiveTab] = useState('info')
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        
-        {/* Header */}
-        <div className="p-6 border-b flex justify-between items-start bg-gray-50">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-2xl font-bold">{club.name}</h2>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                club.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                club.status === 'Inactive' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {club.status}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500">Managed by <span className="font-semibold text-gray-700">{club.head}</span></p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition"><X size={20} /></button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex border-b px-6 bg-white shrink-0 overflow-x-auto">
-          {['info', 'members', 'events', 'analytics', 'settings'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3.5 font-semibold text-sm capitalize whitespace-nowrap ${
-                activeTab === tab ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              {tab === 'info' ? 'Club Info' : tab === 'settings' ? 'Settings' : tab}
-            </button>
-          ))}
-        </div>
-
-        {/* Content Area */}
-        <div className="p-6 overflow-y-auto flex-1 bg-white">
-          
-          {/* Info Tab */}
-          {activeTab === 'info' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-xl border">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Total Members</p>
-                  <p className="text-2xl font-extrabold text-gray-900">{club.members}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-xl border">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Events Hosted</p>
-                  <p className="text-2xl font-extrabold text-gray-900">{club.events}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide mb-3">Core Team</h3>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
-                      {club.head.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm">{club.head}</p>
-                      <p className="text-xs text-primary-600 font-semibold">President</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">A</div>
-                    <div>
-                      <p className="font-bold text-sm">Alice Cooper</p>
-                      <p className="text-xs text-blue-600 font-semibold">Vice President</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Members Tab */}
-          {activeTab === 'members' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Members Roster</h3>
-                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg">{club.members} Total</span>
-              </div>
-              <div className="border rounded-xl overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-gray-500 font-medium">Name</th>
-                      <th className="px-4 py-3 text-gray-500 font-medium">Role</th>
-                      <th className="px-4 py-3 text-gray-500 font-medium">Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <tr key={i}>
-                        <td className="px-4 py-3 font-medium text-gray-900">Student {i}</td>
-                        <td className="px-4 py-3 text-gray-600">Member</td>
-                        <td className="px-4 py-3 text-gray-500">Aug 2023</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Events Tab */}
-          {activeTab === 'events' && (
-            <div>
-              <h3 className="font-bold text-lg mb-4">Events Hosted by {club.name}</h3>
-              {(!club.eventList || club.eventList.length === 0) ? (
-                <p className="text-gray-500 text-sm">No events found.</p>
-              ) : (
-                <div className="space-y-3">
-                  {club.eventList.map((e, idx) => (
-                    <div key={idx} className={`p-4 border rounded-xl flex justify-between items-center transition bg-white ${
-                      e.status === 'pending' ? 'border-yellow-200 bg-yellow-50' : 'hover:border-primary-200'
-                    }`}>
-                      <div>
-                        <h4 className="font-bold text-gray-800">{e.title}</h4>
-                        <p className="text-xs text-gray-500 mt-1">{e.date ? new Date(e.date).toLocaleDateString() : 'Date TBA'}</p>
-                      </div>
-                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${
-                        e.status === 'approved' ? 'bg-green-50 text-green-700' :
-                        e.status === 'rejected' ? 'bg-red-50 text-red-700' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {e.status || 'Unknown'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-              <Eye size={48} className="mb-4 opacity-20" />
-              <p className="text-lg font-bold text-gray-600">Analytics Dashboard</p>
-              <p className="text-sm mt-1">Detailed club analytics will be available here.</p>
-            </div>
-          )}
-
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-8">
-              <div>
-                <h3 className="font-bold text-lg mb-2">Club Status</h3>
-                <p className="text-sm text-gray-500 mb-4">Toggle the active status of this club on the platform.</p>
-                <div className="flex gap-3">
-                  <button className={`px-4 py-2 font-bold text-sm rounded-lg border transition ${club.status === 'Active' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white hover:bg-gray-50'}`}>
-                    Active
-                  </button>
-                  <button className={`px-4 py-2 font-bold text-sm rounded-lg border transition ${club.status === 'Inactive' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white hover:bg-gray-50'}`}>
-                    Inactive
-                  </button>
-                </div>
-              </div>
-              <div className="pt-6 border-t border-red-100">
-                <h3 className="font-bold text-red-600 mb-2">{club.isArchived ? 'Restore Club' : 'Danger Zone'}</h3>
-                <p className="text-sm text-gray-500 mb-4">{club.isArchived ? 'Restore this club to active status.' : 'Archive this club. All historical data will be preserved, but it will be hidden from active listings and unable to create new events.'}</p>
-                <button 
-                  onClick={async () => {
-                    if (!club.realId) {
-                      alert('This club cannot be archived because it does not exist in the database (it only has ghost events).');
-                      return;
-                    }
-                    if (!club.isArchived) {
-                      const confirm = window.confirm('Are you sure you want to archive this club? All historical data will be preserved.');
-                      if (confirm) {
-                        await toggleArchiveStatus(club.realId, true);
-                        onClose();
-                      }
-                    } else {
-                      const confirm = window.confirm('Are you sure you want to restore this club?');
-                      if (confirm) {
-                        await toggleArchiveStatus(club.realId, false);
-                        onClose();
-                      }
-                    }
-                  }}
-                  className={`px-4 py-2 font-bold text-sm rounded-lg transition ${club.isArchived ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
-                >
-                  {club.isArchived ? 'Restore Club' : 'Archive Club'}
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
       </div>
     </div>
   )

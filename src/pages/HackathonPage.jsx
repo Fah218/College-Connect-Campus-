@@ -65,7 +65,7 @@ export default function HackathonPage() {
       })),
   [events])
 
-  // Also include mock hackathons from hackathonStore
+  // All hackathons from DB
   const storeHackathons = (hackathons || []).map(h => ({
     id:          `st-${h.id}`,
     realId:      h.id,
@@ -75,14 +75,12 @@ export default function HackathonPage() {
     deadline:    h.deadline,
     teamSizeStr: h.teamSize,
     teamSizeRaw: h.teamSize?.toLowerCase().includes('individual') ? 1 : 4,
-    tags:        h.domain ? [h.domain] : [],
+    tags:        h.domain ? [h.domain] : (h.tags || ['Competition']),
     location:    h.college,
     mode:        h.mode || 'Online',
     prize:       h.prize,
     participants: h.participants || 0,
-    createdAt:   h.createdAt || h.date, // fallback
-    club:        'Mock Club',
-    source:      'store'
+    createdAt:   h.createdAt || h.date // fallback
   }))
 
   const all = [...eventHackathons, ...storeHackathons]

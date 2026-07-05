@@ -1,4 +1,6 @@
-import Registration from '../models/Registration.js';
+const fs = require('fs');
+
+const content = `import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import JoinRequest from '../models/JoinRequest.js';
 import TeamRequest from '../models/TeamRequest.js';
@@ -28,7 +30,7 @@ export const getAdminAnalytics = async (req, res) => {
     const adminCount = await Admin.countDocuments();
     const totalUsers = studentCount + clubHeadCount + adminCount;
 
-    let allEvents = await Event.find({}).sort({ createdAt: -1 }).lean();
+    const allEvents = await Event.find({}).sort({ createdAt: -1 }).lean();
     const totalEvents = allEvents.length;
     const approvedEvents = allEvents.filter(e => e.status === 'approved');
     const pendingEvents = allEvents.filter(e => e.status === 'pending');
@@ -45,36 +47,20 @@ export const getAdminAnalytics = async (req, res) => {
       }
     });
 
-    const registeredTeams = allRegistrations.filter(r => r.participationType === 'Team').length;
+    const registeredTeams = await TeamRequest.countDocuments();
 
     // 1. Club Management Data (Clubs List)
     const clubHeads = await ClubHead.find({}).lean();
     const clubDataMap = {};
     
     for (const ch of clubHeads) {
-      if (!ch.clubName) continue;
-      const cName = ch.clubName;
-      
-      const clubEvents = allEvents.filter(e => e.clubName === cName).map(e => String(e._id));
-      const uniqueStudents = new Set();
-      const clubRegs = allRegistrations.filter(r => clubEvents.includes(String(r.eventId)));
-      
-      for (const reg of clubRegs) {
-        if (reg.studentId) uniqueStudents.add(String(reg.studentId));
-        if (reg.teamId) {
-           if (reg.teamId.createdBy) uniqueStudents.add(String(reg.teamId.createdBy));
-           if (reg.teamId.currentMembers) {
-              reg.teamId.currentMembers.forEach(mId => uniqueStudents.add(String(mId)));
-           }
-        }
-      }
-
+      const cName = ch.clubName || 'Unknown Club';
       if (!clubDataMap[cName]) {
         clubDataMap[cName] = {
           id: ch._id,
           name: cName,
           head: ch.name,
-          members: uniqueStudents.size, // Calculated actual unique members
+          members: 0, // No club membership collection exists, so 0
           events: 0,
           status: 'Active',
           isArchived: ch.isArchived || false
@@ -82,70 +68,30 @@ export const getAdminAnalytics = async (req, res) => {
       }
     }
 
-    // Add event counts to clubs ONLY if they exist in DB
+    // Add event counts to clubs
     for (const event of allEvents) {
-      const cName = event.clubName;
-      if (cName && clubDataMap[cName]) {
-        clubDataMap[cName].events += 1;
+      const cName = event.club || 'Unknown Club';
+      if (!clubDataMap[cName]) {
+        clubDataMap[cName] = {
+          id: cName, // Mock ID since no ClubHead exists
+          name: cName,
+          head: 'Pending Assignment',
+          members: 0,
+          events: 0,
+          status: 'Active',
+          isArchived: false
+        };
       }
+      clubDataMap[cName].events += 1;
     }
 
     const clubs = Object.values(clubDataMap);
 
-    // 2. Chart Data (Most Active Clubs) - Pure MongoDB Aggregation
-    const chartDataAgg = await Registration.aggregate([
-      {
-        $lookup: {
-          from: 'events',
-          localField: 'eventId',
-          foreignField: '_id',
-          as: 'event'
-        }
-      },
-      { $unwind: '$event' },
-      {
-        $lookup: {
-          from: 'teamrequests',
-          localField: 'teamId',
-          foreignField: '_id',
-          as: 'team'
-        }
-      },
-      {
-        $unwind: { path: '$team', preserveNullAndEmptyArrays: true }
-      },
-      {
-        $project: {
-          clubName: '$event.clubName',
-          studentArray: { $cond: [{ $ifNull: ['$studentId', false] }, ['$studentId'], []] },
-          teamCreator: { $cond: [{ $ifNull: ['$team.createdBy', false] }, ['$team.createdBy'], []] },
-          teamMembers: { $cond: [{ $ifNull: ['$team.currentMembers', false] }, '$team.currentMembers', []] }
-        }
-      },
-      {
-        $project: {
-          clubName: 1,
-          membersArray: { $setUnion: ['$studentArray', '$teamCreator', '$teamMembers'] }
-        }
-      },
-      { $unwind: '$membersArray' },
-      {
-        $group: {
-          _id: '$clubName',
-          uniqueMembers: { $addToSet: '$membersArray' }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          club: '$_id',
-          members: { $size: '$uniqueMembers' }
-        }
-      },
-      { $sort: { members: -1 } }
-    ]);
-    
-    const chartData = chartDataAgg.filter(c => c.members > 0 && c.club);
+    // 2. Chart Data (Most Active Clubs)
+    const chartData = clubs.filter(c => c.events > 0).map(c => ({
+      name: c.name,
+      attendees: c.events // Representing activity by event count since attendees are per event
+    }));
 
     // 3. Platform Insights (Dynamic)
     const thirtyDaysAgo = new Date();
@@ -162,27 +108,27 @@ export const getAdminAnalytics = async (req, res) => {
         id: 'growth',
         type: 'growth',
         title: 'Event Growth',
-        description: `Event creation grew by ${growthRate}% in the last 30 days (${recentEvents} new events).`,
+        description: \`Event creation grew by \${growthRate}% in the last 30 days (\${recentEvents} new events).\`,
         trend: growthRate >= 0 ? 'up' : 'down'
       },
       {
         id: 'engagement',
         type: 'engagement',
         title: 'Platform Engagement',
-        description: `${recentRegs} new registrations in the last 30 days.`,
+        description: \`\${recentRegs} new registrations in the last 30 days.\`,
         trend: recentRegs > 0 ? 'up' : 'neutral'
       },
       {
         id: 'pending',
         type: 'warning',
         title: 'Pending Actions',
-        description: `${pendingEvents.length} events are currently awaiting your approval.`,
+        description: \`\${pendingEvents.length} events are currently awaiting your approval.\`,
         trend: pendingEvents.length > 5 ? 'down' : 'neutral'
       }
     ];
 
     // 4. Monthly Trend Data
-    const monthlyAgg = await Event.aggregate([
+    const monthlyAgg = await Registration.aggregate([
       {
         $group: {
           _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
@@ -245,8 +191,7 @@ export const getClubHeadAnalytics = async (req, res) => {
     const clubId = req.query.clubId;
     if (!clubId) return res.status(400).json({ message: 'Club ID is required' });
 
-    let myEvents = await Event.find({ clubId }).sort({ createdAt: -1 }).lean();
-    
+    const myEvents = await Event.find({ clubId }).sort({ createdAt: -1 }).lean();
     const eventIds = myEvents.map(e => e._id);
     
     const approved = myEvents.filter(e => e.status === 'approved');
@@ -266,7 +211,7 @@ export const getClubHeadAnalytics = async (req, res) => {
       }
     });
 
-    const registeredTeamsCount = myRegistrations.filter(r => r.participationType === 'Team').length;
+    const registeredTeamsCount = await TeamRequest.countDocuments({ eventId: { $in: eventIds } });
 
     let topEvent = null;
     let maxRegs = 0;
@@ -297,11 +242,7 @@ export const getClubHeadAnalytics = async (req, res) => {
         rejected: rejected.length,
         topPerformingEvent: topEvent,
         mostRegistrations: maxRegs,
-        eventHistory: myEvents,
-        participationData: myEvents.slice(0, 5).map(e => ({
-          event: e.title.substring(0, 15) + (e.title.length > 15 ? '...' : ''),
-          participants: e.totalParticipants || 0
-        }))
+        eventHistory: myEvents
       }
     });
   } catch (error) {
@@ -391,3 +332,7 @@ export const getStudentAnalytics = async (req, res) => {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
+`;
+
+fs.writeFileSync('backend/controllers/analyticsController.js', content);
+console.log('Successfully updated backend/controllers/analyticsController.js');

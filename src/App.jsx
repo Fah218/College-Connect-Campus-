@@ -19,6 +19,7 @@ import StudentProfilePage from './pages/StudentProfilePage'
 import AdminProfilePage from './pages/AdminProfilePage'
 import ClubHeadProfilePage from './pages/ClubHeadProfilePage'
 import ExploreEventsPage from './pages/ExploreEventsPage'
+import AdminClubManagementPage from './pages/AdminClubManagementPage'
 
 function App() {
   const fetchEvents = useEventStore(state => state.fetchEvents)
@@ -66,6 +67,11 @@ function App() {
         <Route path="/admin/profile" element={
           <ProtectedRoute role="admin">
             <AdminProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/clubs/:id" element={
+          <ProtectedRoute role="admin">
+            <AdminClubManagementPage />
           </ProtectedRoute>
         } />
         

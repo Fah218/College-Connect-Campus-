@@ -10,36 +10,19 @@ import { format } from 'date-fns'
 
 export default function ClubHeadProfilePage() {
   const { user } = useAuthStore()
-  const { events } = useEventStore()
+  
   const { clubHeadAnalytics, fetchClubHeadAnalytics } = useAnalyticsStore()
   const [isEditing, setIsEditing] = useState(false)
   
   useEffect(() => {
-    fetchClubHeadAnalytics?.()
-  }, [])
+    if (user?._id) {
+      fetchClubHeadAnalytics?.(user._id)
+    }
+  }, [user])
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
   
-  const myEvents = events.filter(e => {
-    const eventClub = (e.club || e.clubName || '').trim().toLowerCase()
-    return eventClub === currentClubName
-  })
-  
-  const approvedEvents = myEvents.filter(e => e.status === 'approved')
-  const pendingEvents = myEvents.filter(e => e.status === 'pending')
-  const rejectedEvents = myEvents.filter(e => e.status === 'rejected')
-  
-  // Use real events for participation chart if available
-  const participationData = myEvents.length > 0 
-    ? myEvents.slice(0, 5).map(e => ({
-        event: e.title.substring(0, 15) + (e.title.length > 15 ? '...' : ''),
-        participants: e.totalParticipants || 0
-      }))
-    : [
-        { event: 'Tech Meetup', participants: 120 },
-        { event: 'Hackathon', participants: 350 },
-        { event: 'AI Workshop', participants: 180 },
-        { event: 'Code Sprint', participants: 210 }
-      ]
+  const myEvents = clubHeadAnalytics?.profile?.eventHistory || []
+  const participationData = clubHeadAnalytics?.profile?.participationData || []
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,7 +52,7 @@ export default function ClubHeadProfilePage() {
                     <p className="text-gray-600 mb-1 flex items-center gap-2">
                       {user?.email} {user?.contactNumber && <span>• {user.contactNumber}</span>}
                     </p>
-                    <p className="text-gray-900 font-bold text-lg mb-2">{user?.clubName || 'Tech Club'}</p>
+                    <p className="text-gray-900 font-bold text-lg mb-2">{user?.clubName || 'Not Assigned'}</p>
                     <p className="text-primary-600 font-medium bg-primary-50 inline-block px-3 py-1 rounded-full text-sm">Role: Club Head</p>
                   </div>
                   <button
@@ -96,22 +79,22 @@ export default function ClubHeadProfilePage() {
               <h3 className="text-lg font-semibold mb-4">📊 Event Stats</h3>
               <div className="grid md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 border rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-gray-800 mb-1">{myEvents.length}</p>
+                  <p className="text-3xl font-bold text-gray-800 mb-1">{clubHeadAnalytics?.profile?.totalEventsCreated || 0}</p>
                   <p className="text-sm text-gray-600">Total Events Created</p>
                 </div>
                 <div className="bg-green-50 border border-green-100 rounded-lg p-4 text-center">
                   <CheckCircle className="mx-auto text-green-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-green-700 mb-1">{approvedEvents.length}</p>
+                  <p className="text-2xl font-bold text-green-700 mb-1">{clubHeadAnalytics?.profile?.approved || 0}</p>
                   <p className="text-sm text-green-600">Approved</p>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 text-center">
                   <Clock className="mx-auto text-orange-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-orange-700 mb-1">{pendingEvents.length}</p>
+                  <p className="text-2xl font-bold text-orange-700 mb-1">{clubHeadAnalytics?.profile?.pending || 0}</p>
                   <p className="text-sm text-orange-600">Pending</p>
                 </div>
                 <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center">
                   <XCircle className="mx-auto text-red-500 mb-2" size={24} />
-                  <p className="text-2xl font-bold text-red-700 mb-1">{rejectedEvents.length}</p>
+                  <p className="text-2xl font-bold text-red-700 mb-1">{clubHeadAnalytics?.profile?.rejected || 0}</p>
                   <p className="text-sm text-red-600">Rejected</p>
                 </div>
               </div>
@@ -125,8 +108,7 @@ export default function ClubHeadProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-yellow-800 font-medium mb-1">Top Performing Event</p>
-                  <p className="text-xl font-bold text-gray-900">Annual Tech Hackathon</p>
-                  <p className="text-sm text-gray-600">Highest engagement & feedback score</p>
+                  <p className="text-xl font-bold text-gray-900">{clubHeadAnalytics?.profile?.topPerformingEvent?.title || 'N/A'}</p>
                 </div>
               </div>
 
@@ -136,8 +118,7 @@ export default function ClubHeadProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-blue-800 font-medium mb-1">Most Registrations</p>
-                  <p className="text-xl font-bold text-gray-900">AI & Machine Learning Workshop</p>
-                  <p className="text-sm text-gray-600">350+ Students Registered</p>
+                  <p className="text-xl font-bold text-gray-900">{clubHeadAnalytics?.profile?.mostRegistrations || 0} Students Registered</p>
                 </div>
               </div>
             </div>
@@ -149,7 +130,7 @@ export default function ClubHeadProfilePage() {
                   <Users size={20} className="text-primary-600" /> 
                   Participation Insights
                 </h3>
-                <span className="px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">85% Avg. Attendance Rate</span>
+                
               </div>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={participationData}>

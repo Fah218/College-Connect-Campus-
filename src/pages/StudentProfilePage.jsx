@@ -14,20 +14,14 @@ export default function StudentProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   
   useEffect(() => {
-    fetchStudentRegistrations?.(user?._id)
-    fetchStudentAnalytics?.()
+    if (user?._id) {
+      fetchStudentRegistrations?.(user._id)
+      fetchStudentAnalytics?.(user._id)
+    }
   }, [user])
   
-  // 1. Skill Proficiency
-  const skillData = user?.skills?.length > 0 
-    ? user.skills.map(skill => ({ skill, proficiency: 70 + Math.floor(Math.random() * 20) })) 
-    : [
-      { skill: 'React', proficiency: 85 },
-      { skill: 'Python', proficiency: 75 },
-      { skill: 'Node.js', proficiency: 70 },
-      { skill: 'ML', proficiency: 60 },
-      { skill: 'Design', proficiency: 55 }
-    ]
+  // 1. Skill Data
+  const skillData = user?.skills || [];
   
   // Find the actual event objects the user is registered for
   const userEvents = (events || []).filter(e => (registeredEvents || []).includes(e.id) || (registeredEvents || []).includes(e._id))
@@ -38,25 +32,10 @@ export default function StudentProfilePage() {
   const attendedEvents = userEvents.filter(e => new Date(e.date || e.startDate) < today)
 
   // 3. Event Participation History
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const participationCounts = {}
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  
-  const history = studentAnalytics?.profile?.eventHistory || []
-  history.forEach(reg => {
-    const d = new Date(reg.createdAt || reg.eventId?.date)
-    if (!isNaN(d.getTime())) {
-      const month = months[d.getMonth()]
-      participationCounts[month] = (participationCounts[month] || 0) + 1
-    }
-  })
-  
-  const participationData = Object.keys(participationCounts).length > 0
-    ? Object.keys(participationCounts).map(month => ({ month, events: participationCounts[month] }))
-    : []
+  const participationData = studentAnalytics?.profile?.participationData || []
 
   // 4. Clubs Interaction
-  const uniqueClubs = Array.from({ length: studentAnalytics?.profile?.distinctClubsCount || 0 }).map((_, i) => 'Club ' + (i+1)); // Using count for UI if names aren't provided by old code. Actually, let's keep userEvents logic for names.
+  const uniqueClubs = studentAnalytics?.profile?.uniqueClubs || [];
 
   // 5. Hackathon Experience
   const hackathons = userEvents.filter(e => e.category === 'Hackathon')
@@ -99,25 +78,20 @@ export default function StudentProfilePage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Skills Progress Bars */}
+              {/* Skills Display */}
               <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Skill Proficiency</h3>
-                <div className="space-y-4">
-                  {skillData.map((s, idx) => (
-                    <div key={idx}>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">{s.skill}</span>
-                        <span className="text-sm font-medium text-gray-500">{s.proficiency}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-primary-600 h-2 rounded-full transition-all duration-500" 
-                          style={{ width: `${s.proficiency}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <h3 className="text-lg font-semibold mb-4">Skills</h3>
+                {skillData.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {skillData.map((skill, idx) => (
+                      <span key={idx} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No skills listed</p>
+                )}
               </div>
 
               {/* Interests Section */}
@@ -132,11 +106,7 @@ export default function StudentProfilePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">Web Development</span>
-                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">Artificial Intelligence</span>
-                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">Open Source</span>
-                  </div>
+                  <p className="text-gray-500 text-sm">No interests listed</p>
                 )}
               </div>
             </div>

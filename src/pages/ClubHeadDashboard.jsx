@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useEventStore } from '../store/eventStore'
 import { useAnalyticsStore } from '../store/analyticsStore'
-import { useAnalyticsStore } from '../store/analyticsStore'
 import { useAuthStore } from '../store/authStore'
 import { useClubStore } from '../store/clubStore'
 import { useRegistrationStore } from '../store/registrationStore'
@@ -17,8 +16,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addM
 
 export default function ClubHeadDashboard() {
   const { events, addEvent, updateEvent, deleteEvent, getEventSummary, uploadProgress } = useEventStore()
-  const { predictAttendance } = useAnalyticsStore()
-  const { addNotification } = useAuthStore()
+    const { addNotification } = useAuthStore()
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [view, setView] = useState('table')
@@ -30,7 +28,7 @@ export default function ClubHeadDashboard() {
   const [viewerIndex, setViewerIndex] = useState(0)
   
   const { user } = useAuthStore()
-  const { clubHeadAnalytics, fetchClubHeadAnalytics } = useAnalyticsStore()
+  const { clubHeadAnalytics, fetchClubHeadAnalytics, predictAttendance } = useAnalyticsStore()
   const currentClubName = (user?.clubName || user?.name || 'My Club').trim().toLowerCase()
   
   const { clubs, fetchClubs } = useClubStore()
@@ -123,8 +121,8 @@ export default function ClubHeadDashboard() {
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <StatCard icon={Calendar} title="Total Events" value={clubHeadAnalytics?.dashboard?.totalEvents || 0} color="primary" />
           <StatCard icon={CheckCircle} title="Approved" value={clubHeadAnalytics?.dashboard?.approved || 0} color="green" />
-          <StatCard icon={Clock} title="Pending Approval" value={clubHeadAnalytics?.dashboard?.pendingApproval || 0} color="orange" />
-          <StatCard icon={Users} title="Total Attendees" value={clubHeadAnalytics?.dashboard?.totalAttendees || 0} color="purple" />
+          <StatCard icon={Clock} title="Pending Approval" value={clubHeadAnalytics?.dashboard?.pending || 0} color="orange" />
+          <StatCard icon={Users} title="Total Attendees" value={clubHeadAnalytics?.dashboard?.totalParticipants || 0} color="purple" />
         </div>
         
         {/* View Toggle */}

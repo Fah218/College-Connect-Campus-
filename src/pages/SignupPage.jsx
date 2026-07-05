@@ -63,17 +63,14 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
         role: roleMapping[formData.role],
-        department: formData.department || 'General',
+        department: formData.department,
         year: formData.role === 'student' ? formData.year : undefined,
         skills: formData.role === 'student' ? formData.skills : undefined,
         interests: formData.role === 'student' ? formData.interests : undefined,
         profileImage: formData.profileImage || undefined,
         phone: formData.phone || undefined,
-        rollNumber: formData.role === 'student' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
-        employeeId: formData.role === 'admin' ? 'EMP' + Math.floor(Math.random() * 100000) : undefined,
         clubDescription: formData.role === 'club_head' ? formData.clubDescription : undefined,
         contactNumber: formData.role === 'club_head' ? formData.phone : undefined,
-        studentId: formData.role === 'club_head' ? 'STU' + Math.floor(Math.random() * 100000) : undefined,
         inviteCode: formData.role === 'club_head' ? formData.inviteCode : undefined,
       };
 

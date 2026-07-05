@@ -20,12 +20,14 @@ export const createEvent = async (req, res) => {
     if (eventData.additionalImages) {
        eventData.additionalImages = eventData.additionalImages.filter(img => !img.startsWith('blob:'));
     }
+    if (eventData.problemStatementPdf && eventData.problemStatementPdf.startsWith('blob:')) delete eventData.problemStatementPdf;
 
 
     const uploadToCloudinary = async (file) => {
       try {
         const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'college_campus/events'
+          folder: 'college_campus/events',
+          resource_type: 'auto'
         });
         fs.unlinkSync(file.path);
         return { url: result.secure_url, public_id: result.public_id };
@@ -53,6 +55,10 @@ export const createEvent = async (req, res) => {
           eventData.additionalImages.push(res.url);
           eventData.additionalImagesPublicIds.push(res.public_id);
         }
+      }
+      if (req.files.problemStatementPdf && req.files.problemStatementPdf.length > 0) {
+        const res = await uploadToCloudinary(req.files.problemStatementPdf[0]);
+        eventData.problemStatementPdf = res.url;
       }
     }
 
@@ -142,12 +148,14 @@ export const updateEvent = async (req, res) => {
     if (updates.additionalImages) {
        updates.additionalImages = updates.additionalImages.filter(img => !img.startsWith('blob:'));
     }
+    if (updates.problemStatementPdf && updates.problemStatementPdf.startsWith('blob:')) delete updates.problemStatementPdf;
 
 
     const uploadToCloudinary = async (file) => {
       try {
         const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'college_campus/events'
+          folder: 'college_campus/events',
+          resource_type: 'auto'
         });
         fs.unlinkSync(file.path);
         return { url: result.secure_url, public_id: result.public_id };
@@ -171,6 +179,10 @@ export const updateEvent = async (req, res) => {
           updates.additionalImages.push(res.url);
           updates.additionalImagesPublicIds.push(res.public_id);
         }
+      }
+      if (req.files.problemStatementPdf && req.files.problemStatementPdf.length > 0) {
+        const res = await uploadToCloudinary(req.files.problemStatementPdf[0]);
+        updates.problemStatementPdf = res.url;
       }
     }
 

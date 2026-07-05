@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export const useRecommendationStore = create((set, get) => ({
   userPreferences: {
     domains: ['AI', 'Web Development'],
-    clubs: ['Tech Club', 'Coding Club'],
+    clubs: [],
     skills: ['React', 'Python', 'Machine Learning']
   },
   

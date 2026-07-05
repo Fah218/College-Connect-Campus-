@@ -33,7 +33,7 @@ export default function StudentDashboard() {
     fetchHackathonData?.()
     if (user?._id) {
       fetchStudentRegistrations?.(user._id)
-      fetchStudentAnalytics?.()
+      fetchStudentAnalytics?.(user._id)
     }
   }, [user])
   
@@ -63,22 +63,9 @@ export default function StudentDashboard() {
     .filter(e => e.category === 'Hackathon')
     .map(e => String(e.id || e._id));
 
-  const joinedHackathonsCount = new Set([...registeredHackathonIds]).size;
+    
   
-  const teamInvitationsCount = (joinRequests || []).filter(jr => 
-    jr.status === 'pending' && 
-    (teamRequests || []).some(tr => 
-      (String(tr._id) === String(jr.teamRequestId) || String(tr.id) === String(jr.teamRequestId)) && 
-      (String(tr.createdBy) === String(user?._id) || String(tr.createdBy) === String(user?._id))
-    )
-  ).length;
-
-  const upcomingEventsCount = approvedEvents.filter(e => {
-    const eventDate = new Date(e.date || e.startDate);
-    const today = new Date(new Date().setHours(0,0,0,0));
-    return eventDate >= today;
-  }).length;
-  
+    
   const filteredEvents = approvedEvents.filter(event => {
     const matchesCategory = filter.category === 'all' || event.category === filter.category
     const matchesSearch = event.title.toLowerCase().includes(filter.search.toLowerCase())

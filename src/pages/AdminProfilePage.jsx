@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, Users, Calendar, ShieldCheck, Activity, Edit, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuthStore } from '../store/authStore'
@@ -15,14 +15,7 @@ export default function AdminProfilePage() {
     fetchAdminAnalytics?.()
   }, [])
   
-  const growthData = [
-    { month: 'Sep', participants: 120 },
-    { month: 'Oct', participants: 250 },
-    { month: 'Nov', participants: 380 },
-    { month: 'Dec', participants: 450 },
-    { month: 'Jan', participants: 600 }
-  ]
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -109,12 +102,12 @@ export default function AdminProfilePage() {
                 <div className="bg-gray-50 rounded-lg p-4 border">
                   <h4 className="text-sm font-medium text-gray-700 mb-4">Growth Trend</h4>
                   <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={growthData}>
+                    <LineChart data={adminAnalytics?.profile?.growthTrend || []}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="month" tick={{fontSize: 12}} />
                       <YAxis tick={{fontSize: 12}} />
                       <Tooltip />
-                      <Line type="monotone" dataKey="participants" stroke="#3b82f6" strokeWidth={3} />
+                      <Line type="monotone" dataKey="events" stroke="#3b82f6" strokeWidth={3} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

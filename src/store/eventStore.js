@@ -42,7 +42,7 @@ export const useEventStore = create(
       addEvent: async (event) => {
         const payload = {
           ...event,
-          clubName: event.club || 'Tech Club',
+          clubName: event.club || '',
           startDate: event.startDate || event.date || new Date().toISOString().split('T')[0],
           startTime: event.startTime || event.time || '12:00',
           shortDescription: event.shortDescription || 'No description provided',
@@ -61,6 +61,9 @@ export const useEventStore = create(
           if (event.additionalImageFile) fd.append('additionalImages', event.additionalImageFile);
           if (event.additionalImageFiles) {
             event.additionalImageFiles.forEach(file => fd.append('additionalImages', file));
+          }
+          if (event.problemStatementPdfFile) {
+            fd.append('problemStatementPdf', event.problemStatementPdfFile);
           }
           
           const response = await axios.post('http://localhost:5001/api/events/create', fd, {
@@ -122,16 +125,19 @@ if (typeof id === 'string') {
             const bannerFile = updates.bannerImageFile;
             const additionalFiles = updates.additionalImageFile;
             const additionalImageFilesArr = updates.additionalImageFiles; // note this is often an array or a single file
+            const pdfFile = updates.problemStatementPdfFile;
             
             // Remove file objects from updates to avoid circular JSON
             const cleanUpdates = { ...updates, status: 'pending' };
             delete cleanUpdates.bannerImageFile;
             delete cleanUpdates.additionalImageFile;
             delete cleanUpdates.additionalImageFiles;
+            delete cleanUpdates.problemStatementPdfFile;
             
             fd.append('eventData', JSON.stringify(cleanUpdates));
             
             if (bannerFile) fd.append('bannerImage', bannerFile);
+            if (pdfFile) fd.append('problemStatementPdf', pdfFile);
             if (additionalFiles && additionalFiles.length) {
               for(let i=0; i<additionalFiles.length; i++) {
                 fd.append('additionalImages', additionalFiles[i]);

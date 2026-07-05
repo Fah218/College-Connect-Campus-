@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import api from '../services/api';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5001/api/analytics';
 
 export const useAnalyticsStore = create((set) => ({
   studentAnalytics: null,
@@ -8,20 +10,22 @@ export const useAnalyticsStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  fetchStudentAnalytics: async () => {
+  fetchStudentAnalytics: async (userId) => {
+    if (!userId || userId === 'undefined') return;
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/analytics/student');
+      const response = await axios.get(`${API_URL}/student?userId=${userId}`);
       set({ studentAnalytics: response.data, isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch student analytics', isLoading: false });
     }
   },
 
-  fetchClubHeadAnalytics: async () => {
+  fetchClubHeadAnalytics: async (clubId) => {
+    if (!clubId || clubId === 'undefined') return;
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/analytics/clubhead');
+      const response = await axios.get(`${API_URL}/clubhead?clubId=${clubId}`);
       set({ clubHeadAnalytics: response.data, isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch club head analytics', isLoading: false });
@@ -31,7 +35,7 @@ export const useAnalyticsStore = create((set) => ({
   fetchAdminAnalytics: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/analytics/admin');
+      const response = await axios.get(`${API_URL}/admin`);
       set({ adminAnalytics: response.data, isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch admin analytics', isLoading: false });
