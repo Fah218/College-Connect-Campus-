@@ -1,4 +1,5 @@
 import ClubCode from '../models/ClubCode.js';
+import ClubHead from '../models/ClubHead.js';
 
 // Get all clubs
 export const getClubs = async (req, res) => {
@@ -10,15 +11,26 @@ export const getClubs = async (req, res) => {
   }
 };
 
-// Archive or Unarchive a club
+// Archive or Unarchive a club (Targets ClubHead)
 export const toggleArchiveClub = async (req, res) => {
   try {
     const { id } = req.params;
     const { isArchived } = req.body;
 
-    const club = await ClubCode.findByIdAndUpdate(
+    const updateFields = isArchived ? {
+      isArchived: true,
+      status: "Archived",
+      archivedAt: new Date(),
+      archivedBy: "Admin"
+    } : {
+      isArchived: false,
+      status: "Active",
+      $unset: { archivedAt: "", archivedBy: "" }
+    };
+
+    const club = await ClubHead.findByIdAndUpdate(
       id,
-      { isArchived },
+      updateFields,
       { new: true }
     );
 

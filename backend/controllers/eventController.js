@@ -3,6 +3,7 @@ import Registration from '../models/Registration.js';
 import fs from 'fs';
 import cloudinary from '../config/cloudinary.js';
 import path from 'path';
+import ClubHead from '../models/ClubHead.js';
 
 export const createEvent = async (req, res) => {
   try {
@@ -61,8 +62,18 @@ export const createEvent = async (req, res) => {
         eventData.problemStatementPdf = res.url;
       }
     }
-
-    // Assuming you have the club head ID from authentication middleware or passed in body
+    
+    // Assuming you have the club head ID from authentication middleware or passed in body, or look up by clubName
+    const clubName = eventData.clubName;
+    if (clubName) {
+       const clubHead = await ClubHead.findOne({ clubName: new RegExp('^' + clubName.trim() + '$', 'i') });
+       if (clubHead && clubHead.isArchived) {
+          return res.status(403).json({
+             success: false,
+             message: 'Club is currently archived and cannot create new events.'
+          });
+       }
+    }
     console.log("---- ABOUT TO SAVE TO MONGODB ----");
     console.log("eventData being saved:", JSON.stringify(eventData, null, 2));
     const newEvent = new Event(eventData);

@@ -53,18 +53,18 @@ export const getAdminAnalytics = async (req, res) => {
     
     for (const ch of clubHeads) {
       if (!ch.clubName) continue;
-      const cName = ch.clubName;
+      const cName = ch.clubName.trim().toLowerCase();
       
-      const clubEvents = allEvents.filter(e => e.clubName === cName).map(e => String(e._id));
+      const clubEvents = allEvents.filter(e => (e.clubName || '').trim().toLowerCase() === cName).map(e => String(e._id));
       const uniqueStudents = new Set();
-      const clubRegs = allRegistrations.filter(r => clubEvents.includes(String(r.eventId)));
+      const clubRegs = allRegistrations.filter(r => clubEvents.includes(String(r.eventId._id || r.eventId)));
       
       for (const reg of clubRegs) {
-        if (reg.studentId) uniqueStudents.add(String(reg.studentId));
+        if (reg.studentId) uniqueStudents.add(String(reg.studentId._id || reg.studentId));
         if (reg.teamId) {
-           if (reg.teamId.createdBy) uniqueStudents.add(String(reg.teamId.createdBy));
+           if (reg.teamId.createdBy) uniqueStudents.add(String(reg.teamId.createdBy._id || reg.teamId.createdBy));
            if (reg.teamId.currentMembers) {
-              reg.teamId.currentMembers.forEach(mId => uniqueStudents.add(String(mId)));
+              reg.teamId.currentMembers.forEach(mId => uniqueStudents.add(String(mId._id || mId)));
            }
         }
       }
@@ -72,11 +72,11 @@ export const getAdminAnalytics = async (req, res) => {
       if (!clubDataMap[cName]) {
         clubDataMap[cName] = {
           id: ch._id,
-          name: cName,
+          name: ch.clubName,
           head: ch.name,
           members: uniqueStudents.size, // Calculated actual unique members
           events: 0,
-          status: 'Active',
+          status: ch.status || 'Active',
           isArchived: ch.isArchived || false
         };
       }
@@ -84,7 +84,7 @@ export const getAdminAnalytics = async (req, res) => {
 
     // Add event counts to clubs ONLY if they exist in DB
     for (const event of allEvents) {
-      const cName = event.clubName;
+      const cName = (event.clubName || '').trim().toLowerCase();
       if (cName && clubDataMap[cName]) {
         clubDataMap[cName].events += 1;
       }
@@ -128,17 +128,18 @@ export const getAdminAnalytics = async (req, res) => {
           membersArray: { $setUnion: ['$studentArray', '$teamCreator', '$teamMembers'] }
         }
       },
-      { $unwind: '$membersArray' },
+      { $unwind: { path: '$membersArray', preserveNullAndEmptyArrays: true } },
       {
         $group: {
-          _id: '$clubName',
+          _id: { $toLower: { $trim: { input: '$clubName' } } },
+          originalClubName: { $first: '$clubName' },
           uniqueMembers: { $addToSet: '$membersArray' }
         }
       },
       {
         $project: {
           _id: 0,
-          club: '$_id',
+          club: '$originalClubName',
           members: { $size: '$uniqueMembers' }
         }
       },
@@ -245,8 +246,31 @@ export const getClubHeadAnalytics = async (req, res) => {
     const clubId = req.query.clubId;
     if (!clubId) return res.status(400).json({ message: 'Club ID is required' });
 
-    let myEvents = await Event.find({ clubId }).sort({ createdAt: -1 }).lean();
+    // 1. Authenticated Club Head is loaded from MongoDB
+    const clubHead = await ClubHead.findById(clubId).lean();
+    if (!clubHead) return res.status(404).json({ message: 'Club Head not found' });
     
+    // 2. Club name extracted
+    const cName = (clubHead.clubName || '').trim().toLowerCase();
+    
+    console.log(`[AUDIT] Authenticated User: _id=${clubHead._id}, name=${clubHead.name}, clubName=${clubHead.clubName}`);
+
+    // 3. Fetch events and 4 & 5. Filter by normalized string comparison
+    const allEvents = await Event.find({}).sort({ createdAt: -1 }).lean();
+    let myEvents = allEvents.filter(e => {
+       const eventClubName = (e.clubName || '').trim().toLowerCase();
+       const isMatch = eventClubName === cName;
+       
+       // 6. Log every comparison
+       if (eventClubName) {
+         console.log(`[AUDIT] Auth Club: "${cName}" | Event Club: "${eventClubName}" | Match: ${isMatch}`);
+       }
+       return isMatch;
+    });
+    
+    // 7. Verify length
+    console.log(`[AUDIT] Total events found for this club: ${myEvents.length}`);
+
     const eventIds = myEvents.map(e => e._id);
     
     const approved = myEvents.filter(e => e.status === 'approved');
@@ -386,6 +410,141 @@ export const getStudentAnalytics = async (req, res) => {
         skills: student?.skills || [],
         interests: student?.interests || []
       }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+// @desc    Get complete analytical dashboard data for a single club (Admin View)
+export const getAdminClubAnalytics = async (req, res) => {
+  try {
+    const clubId = req.params.id;
+    if (!clubId) return res.status(400).json({ message: 'Club ID is required' });
+
+    const clubHead = await ClubHead.findById(clubId).lean();
+    if (!clubHead) {
+      return res.status(404).json({ message: 'Club not found' });
+    }
+
+    const cName = (clubHead.clubName || '').trim().toLowerCase();
+    
+    // Fetch events
+    const allEvents = await Event.find({}).lean();
+    const myEvents = allEvents.filter(e => (e.clubName || '').trim().toLowerCase() === cName);
+    const myEventIds = myEvents.map(e => String(e._id));
+
+    const approved = myEvents.filter(e => e.status === 'approved');
+    const pending = myEvents.filter(e => e.status === 'pending');
+    const rejected = myEvents.filter(e => e.status === 'rejected');
+
+    // Fetch Registrations
+    const allRegistrations = await Registration.find({}).populate('teamId').lean();
+    const clubRegs = allRegistrations.filter(r => myEventIds.includes(String(r.eventId._id || r.eventId)));
+
+    let totalParticipants = 0;
+    let uniqueStudents = new Set();
+    
+    clubRegs.forEach(reg => {
+      if (reg.participationType === 'Individual') {
+         totalParticipants += 1;
+         if(reg.studentId) uniqueStudents.add(String(reg.studentId._id || reg.studentId));
+      }
+      else if (reg.participationType === 'Team' && reg.teamId) {
+        totalParticipants += 1 + (reg.teamId.currentMembers?.length || 0) + (reg.teamId.offlineMembers?.length || 0);
+        if(reg.teamId.createdBy) uniqueStudents.add(String(reg.teamId.createdBy._id || reg.teamId.createdBy));
+        if(reg.teamId.currentMembers) {
+           reg.teamId.currentMembers.forEach(mId => uniqueStudents.add(String(mId._id || mId)));
+        }
+      }
+    });
+
+    const registeredTeamsCount = clubRegs.filter(r => r.participationType === 'Team').length;
+    const avgParticipants = myEvents.length > 0 ? (totalParticipants / myEvents.length).toFixed(1) : 0;
+
+    // Recent Events Table Data
+    const recentEvents = [...myEvents].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(e => {
+       const eId = String(e._id);
+       const eRegs = clubRegs.filter(r => String(r.eventId._id || r.eventId) === eId);
+       let eParts = 0;
+       eRegs.forEach(reg => {
+          if (reg.participationType === 'Individual') eParts += 1;
+          else if (reg.participationType === 'Team' && reg.teamId) {
+             eParts += 1 + (reg.teamId.currentMembers?.length || 0) + (reg.teamId.offlineMembers?.length || 0);
+          }
+       });
+       return { ...e, totalRegistrations: eRegs.length, totalParticipants: eParts };
+    });
+
+    // Chart Data (Monthly Creation)
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const creationCounts = {};
+    myEvents.forEach(e => {
+       const d = new Date(e.createdAt);
+       const m = monthNames[d.getMonth()];
+       creationCounts[m] = (creationCounts[m] || 0) + 1;
+    });
+    const monthlyCreation = Object.keys(creationCounts).map(month => ({ month, events: creationCounts[month] }));
+
+    // Chart Data (Participants per Event)
+    const eventParticipationChart = recentEvents.slice(0, 10).map(e => ({
+      name: e.title.substring(0, 15) + (e.title.length > 15 ? '...' : ''),
+      registrations: e.totalRegistrations,
+      participants: e.totalParticipants
+    }));
+
+    // Timeline
+    const timeline = [];
+    myEvents.forEach(e => {
+       timeline.push({ id: `ec-${e._id}`, type: 'event_created', title: `Event Created: ${e.title}`, date: e.createdAt, eventId: e._id });
+       if(e.status === 'approved') timeline.push({ id: `ea-${e._id}`, type: 'event_approved', title: `Event Approved: ${e.title}`, date: e.updatedAt || e.createdAt, eventId: e._id });
+       if(e.status === 'rejected') timeline.push({ id: `er-${e._id}`, type: 'event_rejected', title: `Event Rejected: ${e.title}`, date: e.updatedAt || e.createdAt, eventId: e._id });
+    });
+    clubRegs.forEach(r => {
+       const e = myEvents.find(ev => String(ev._id) === String(r.eventId._id || r.eventId));
+       const eTitle = e ? e.title : 'Unknown Event';
+       if(r.participationType === 'Team') timeline.push({ id: `rt-${r._id}`, type: 'team_registration', title: `Team Registration for ${eTitle}`, date: r.createdAt, eventId: e ? e._id : null });
+       else timeline.push({ id: `ri-${r._id}`, type: 'individual_registration', title: `Individual Registration for ${eTitle}`, date: r.createdAt, eventId: e ? e._id : null });
+    });
+    
+    timeline.sort((a,b) => new Date(b.date) - new Date(a.date));
+    const recentActivity = timeline.slice(0, 15);
+
+    res.status(200).json({
+      club: {
+        id: clubHead._id,
+        name: clubHead.clubName,
+        head: clubHead.name,
+        email: clubHead.email,
+        phone: clubHead.phone || clubHead.contactNumber || null,
+        department: clubHead.department || null,
+        designation: clubHead.designation || null,
+        profileImage: clubHead.profileImage || null,
+        isArchived: clubHead.isArchived,
+        createdAt: clubHead.createdAt
+      },
+      statistics: {
+        totalEvents: myEvents.length,
+        approvedEvents: approved.length,
+        pendingEvents: pending.length,
+        rejectedEvents: rejected.length,
+        totalRegistrations: clubRegs.length,
+        totalParticipants,
+        uniqueStudents: uniqueStudents.size,
+        registeredTeams: registeredTeamsCount,
+        avgParticipants
+      },
+      charts: {
+        monthlyCreation,
+        eventParticipationChart,
+        approvalRate: [
+          { name: 'Approved', value: approved.length },
+          { name: 'Pending', value: pending.length },
+          { name: 'Rejected', value: rejected.length }
+        ]
+      },
+      recentEvents,
+      recentActivity
     });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });

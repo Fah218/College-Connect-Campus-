@@ -145,7 +145,7 @@ export default function AdminDashboard() {
             )}
             
             {selectedTab === 'analytics' && (
-              <AnalyticsSection chartData={adminAnalytics?.dashboard?.chartData || []} monthlyData={adminAnalytics?.dashboard?.monthlyData || []} events={events} />
+              <AnalyticsSection dashboard={adminAnalytics?.dashboard} events={events} />
             )}
             
             {selectedTab === 'timeline' && (
@@ -503,21 +503,30 @@ function AdminEventViewModal({ event, onClose, onApprove, onReject, onImageClick
   )
 }
 
-function AnalyticsSection({ chartData, monthlyData, events }) {
-  const exportData = events.map(e => ({
-    Title: e.title,
-    Club: e.club,
-    Date: e.date,
-    Attendees: e.attendees,
-    Status: e.status
-  }))
+function AnalyticsSection({ dashboard, events }) {
+  const chartData = dashboard?.chartData || []
+  const monthlyData = dashboard?.monthlyData || []
+  
+  const exportData = [
+    { Section: "Overview", Key: "Total Users", Value: dashboard?.totalUsers || 0 },
+    { Section: "Overview", Key: "Total Events", Value: dashboard?.totalEvents || 0 },
+    { Section: "Overview", Key: "Total Registrations", Value: dashboard?.totalRegistrations || 0 },
+    { Section: "Overview", Key: "Total Participants", Value: dashboard?.totalParticipants || 0 },
+    { Section: "Overview", Key: "Registered Teams", Value: dashboard?.registeredTeams || 0 },
+    { Section: "Overview", Key: "Approved Events", Value: dashboard?.approved || 0 },
+    { Section: "Overview", Key: "Pending Events", Value: dashboard?.pending || 0 },
+    
+    ...chartData.map(c => ({ Section: "Most Active Clubs", Key: c.club, Value: `${c.members} Members` })),
+    ...monthlyData.map(m => ({ Section: "Monthly Trends", Key: m.month, Value: `${m.events} Events` })),
+    ...(dashboard?.insights || []).map(i => ({ Section: "Platform Insights", Key: i.title, Value: i.value }))
+  ]
   
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
         <div className="flex gap-2">
-          <ExportButton data={exportData} filename="event_report" type="csv" />
-          <ExportButton data={exportData} filename="event_report" type="pdf" />
+          <ExportButton data={exportData} filename="admin_analytics_report" type="csv" />
+          <ExportButton data={exportData} filename="admin_analytics_report" type="pdf" />
         </div>
       </div>
       
@@ -526,10 +535,10 @@ function AnalyticsSection({ chartData, monthlyData, events }) {
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
+            <XAxis dataKey="club" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="attendees" fill="#3b82f6" />
+            <Bar dataKey="members" fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -578,12 +587,12 @@ function AuditSection({ logs }) {
   });
 
   const exportData = filteredLogs.map(log => ({
-    Action: log.action,
-    Type: 'Event Status',
-    Event: log.eventTitle,
-    User: log.user,
     Timestamp: format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss'),
-    Remarks: log.remarks || '-'
+    User: log.user,
+    Action: log.action,
+    Entity: log.eventTitle,
+    Status: 'Recorded',
+    Description: log.remarks || 'No remarks'
   }))
   
   return (
@@ -736,8 +745,8 @@ function ClubSection({ clubs, onManage }) {
               </td>
               <td className="px-6 py-4">
                 <Link
-                  to={`/admin/clubs/${club.name || club.id || idx}`}
-                  className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                  to={`/admin/clubs/${club.id}`}
+                  className="text-primary-600 hover:text-primary-900 bg-primary-50 px-3 py-1 rounded-md"
                 >
                   Manage
                 </Link>

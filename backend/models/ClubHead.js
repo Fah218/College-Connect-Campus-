@@ -9,7 +9,14 @@ const clubHeadSchema = new mongoose.Schema({
   profileImage: { type: String },
   contactNumber: { type: String },
   studentId: { type: String, required: true },
-  role: { type: String, default: 'ClubHead' }
+  role: { type: String, default: 'ClubHead' },
+  department: { type: String },
+  designation: { type: String },
+  phone: { type: String },
+  isArchived: { type: Boolean, default: false },
+  status: { type: String, default: 'Active' },
+  archivedAt: { type: Date },
+  archivedBy: { type: String }
 }, { timestamps: true });
 
 const ClubHead = mongoose.model('ClubHead', clubHeadSchema);

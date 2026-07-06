@@ -7,6 +7,7 @@ export const useAnalyticsStore = create((set) => ({
   studentAnalytics: null,
   clubHeadAnalytics: null,
   adminAnalytics: null,
+  adminClubAnalytics: null,
   isLoading: false,
   error: null,
 
@@ -39,6 +40,17 @@ export const useAnalyticsStore = create((set) => ({
       set({ adminAnalytics: response.data, isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch admin analytics', isLoading: false });
+    }
+  },
+
+  fetchAdminClubAnalytics: async (clubId) => {
+    if (!clubId || clubId === 'undefined') return;
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/admin/club/${clubId}`);
+      set({ adminClubAnalytics: response.data, isLoading: false });
+    } catch (error) {
+      set({ error: error.response?.data?.message || 'Failed to fetch admin club analytics', isLoading: false });
     }
   }
 }));

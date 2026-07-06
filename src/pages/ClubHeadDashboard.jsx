@@ -13,6 +13,7 @@ import ParticipantsModal from '../components/ParticipantsModal'
 import ImageViewer from '../components/ImageViewer'
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, X, Upload, XCircle, Settings, Mail, Bell, Shield, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, Search, CheckCircle, Layout, List, Loader2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 
 export default function ClubHeadDashboard() {
   const { events, addEvent, updateEvent, deleteEvent, getEventSummary, uploadProgress } = useEventStore()
@@ -26,6 +27,7 @@ export default function ClubHeadDashboard() {
   const [viewingParticipants, setViewingParticipants] = useState(null)
   const [viewerImages, setViewerImages] = useState(null)
   const [viewerIndex, setViewerIndex] = useState(0)
+  const navigate = useNavigate()
   
   const { user } = useAuthStore()
   const { clubHeadAnalytics, fetchClubHeadAnalytics, predictAttendance } = useAnalyticsStore()
@@ -126,28 +128,59 @@ export default function ClubHeadDashboard() {
         </div>
         
         {/* View Toggle */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setView('table')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'table' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
-          >
-            <List size={18} />
-            Table View
-          </button>
-          <button
-            onClick={() => setView('timeline')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'timeline' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
-          >
-            <Layout size={18} />
-            Timeline View
-          </button>
-          <button
-            onClick={() => setView('calendar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'calendar' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
-          >
-            <Calendar size={18} />
-            Calendar View
-          </button>
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setView('table')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'table' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
+            >
+              <List size={18} />
+              Table View
+            </button>
+            <button
+              onClick={() => setView('timeline')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'timeline' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
+            >
+              <Layout size={18} />
+              Timeline View
+            </button>
+            <button
+              onClick={() => setView('calendar')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${view === 'calendar' ? 'bg-primary-600 text-white' : 'bg-white border'}`}
+            >
+              <Calendar size={18} />
+              Calendar View
+            </button>
+          </div>
+          
+          <div className="flex gap-2">
+            <ExportButton 
+              data={myEvents.map(e => ({
+                Title: e.title,
+                Status: e.status,
+                Registrations: e.attendees || 0,
+                Participants: e.totalParticipants || 0,
+                Date: e.date || e.startDate,
+                Category: e.category,
+                "Approval Status": e.status === 'approved' ? 'Approved' : e.status === 'rejected' ? 'Rejected' : 'Pending'
+              }))} 
+              filename={`${user?.clubName || 'Club'}_Events_Report`} 
+              type="csv" 
+            />
+            <ExportButton 
+              data={myEvents.map(e => ({
+                Title: e.title,
+                Status: e.status,
+                Registrations: e.attendees || 0,
+                Participants: e.totalParticipants || 0,
+                Date: e.date || e.startDate,
+                Category: e.category,
+                "Approval Status": e.status === 'approved' ? 'Approved' : e.status === 'rejected' ? 'Rejected' : 'Pending'
+              }))} 
+              filename={`${user?.clubName || 'Club'}_Events_Report`} 
+              type="pdf" 
+            />
+          </div>
         </div>
         
         {view === 'timeline' ? (
@@ -160,7 +193,7 @@ export default function ClubHeadDashboard() {
             onDayClick={(day) => setSelectedDay(isSameDay(selectedDay, day) ? null : day)}
             onMonthPrev={() => { setCalendarDate(subMonths(calendarDate, 1)); setSelectedDay(null) }}
             onMonthNext={() => { setCalendarDate(addMonths(calendarDate, 1)); setSelectedDay(null) }}
-            onEventClick={(evt) => setViewingEvent(evt)}
+            onEventClick={(evt) => navigate('/admin/events/' + (evt.id || evt._id))}
             onCreateOnDay={(day) => {
               setEditingEvent(null)
               setShowModal(true)
@@ -287,7 +320,10 @@ function CalendarView({ events, currentDate, selectedDay, onDayClick, onMonthPre
   }
 
   const eventsOnDay = (d) => events.filter(e => {
-    try { return isSameDay(parseISO(e.date || e.startDate), d) } catch { return false }
+    try { 
+      const eventDate = new Date(e.date || e.startDate)
+      return isSameDay(eventDate, d) 
+    } catch { return false }
   })
 
   const selectedEvents = selectedDay ? eventsOnDay(selectedDay) : []
@@ -296,6 +332,7 @@ function CalendarView({ events, currentDate, selectedDay, onDayClick, onMonthPre
     approved: 'bg-green-500',
     pending:  'bg-yellow-400',
     rejected: 'bg-red-500',
+    completed: 'bg-blue-500',
   }[status] || 'bg-gray-400')
 
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -362,6 +399,7 @@ function CalendarView({ events, currentDate, selectedDay, onDayClick, onMonthPre
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500"></span> Approved</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-yellow-400"></span> Pending</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500"></span> Rejected</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Completed</span>
         </div>
       </div>
 
@@ -404,14 +442,6 @@ function CalendarView({ events, currentDate, selectedDay, onDayClick, onMonthPre
           </div>
         )}
       </div>
-      {/* Fullscreen ImageViewer */}
-      {viewerImages && (
-        <ImageViewer 
-          images={viewerImages} 
-          initialIndex={viewerIndex} 
-          onClose={() => setViewerImages(null)} 
-        />
-      )}
     </div>
   )
 }
