@@ -4,8 +4,8 @@ import { useAnalyticsStore } from '../store/analyticsStore'
 export default function PredictiveInsights({ event, historicalEvents }) {
   const { predictAttendance, predictApprovalSuccess } = useAnalyticsStore()
   
-  const attendancePrediction = predictAttendance(event, historicalEvents)
-  const approvalPrediction = predictApprovalSuccess(event)
+  const attendancePrediction = predictAttendance?.(event, historicalEvents)
+  const approvalPrediction = predictApprovalSuccess?.(event)
   
   const getConfidenceColor = (confidence) => {
     switch (confidence) {

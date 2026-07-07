@@ -1,7 +1,7 @@
 import { Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { format, parseISO, isBefore, isAfter, addDays } from 'date-fns'
 
-export default function Timeline({ events, userRole }) {
+export default function Timeline({ events, userRole, onEventClick }) {
   const now = new Date()
   
   const timelineItems = events
@@ -52,6 +52,11 @@ export default function Timeline({ events, userRole }) {
       }
     })
     .sort((a, b) => a.sortDate - b.sortDate)
+
+  console.log("Timeline render", {
+    eventsLength: events?.length,
+    timelineItemsLength: timelineItems.length
+  });
   
   const getColorClasses = (color) => {
     const colors = {
@@ -81,7 +86,10 @@ export default function Timeline({ events, userRole }) {
                 )}
               </div>
               
-              <div className="flex-1 pb-8">
+              <div 
+                className="flex-1 pb-8 cursor-pointer hover:opacity-80 transition"
+                onClick={() => onEventClick && onEventClick(item)}
+              >
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-semibold">{item.title}</h3>
@@ -110,11 +118,17 @@ export default function Timeline({ events, userRole }) {
         })}
       </div>
       
-      {timelineItems.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No events in timeline
-        </div>
-      )}
+      {(() => {
+        if (timelineItems.length === 0) {
+          console.log("Rendering empty state");
+          return (
+            <div className="text-center py-8 text-gray-500">
+              No events in timeline
+            </div>
+          );
+        }
+        return null;
+      })()}
     </div>
   )
 }

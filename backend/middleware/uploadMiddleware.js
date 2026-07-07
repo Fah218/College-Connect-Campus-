@@ -6,20 +6,37 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/events/');
   },
   filename: function (req, file, cb) {
+    console.log('MULTER INCOMING FILE:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
 function checkFileType(file, cb) {
-  const filetypes = /jpeg|jpg|png|gif|webp/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
+  if (file.fieldname === 'problemStatementPdf') {
+    const filetypes = /pdf/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = file.mimetype === 'application/pdf';
 
-  if (mimetype && extname) {
-    return cb(null, true);
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('PDF Only for Problem Statement!'));
+    }
   } else {
-    cb(new Error('Images Only!'));
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Images Only!'));
+    }
   }
 }
 

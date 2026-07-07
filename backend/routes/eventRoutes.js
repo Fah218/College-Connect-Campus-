@@ -8,10 +8,16 @@ const router = express.Router();
 router.get('/', getEvents);
 
 // Create a new event
-router.post('/create', upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'additionalImages', maxCount: 5 }]), createEvent);
+const uploadFields = [
+  { name: 'bannerImage', maxCount: 1 }, 
+  { name: 'additionalImages', maxCount: 5 },
+  { name: 'problemStatementPdf', maxCount: 1 }
+];
+
+router.post('/create', upload.fields(uploadFields), createEvent);
 
 // Update an event
-router.put('/:id', upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'additionalImages', maxCount: 5 }]), updateEvent);
+router.put('/:id', upload.fields(uploadFields), updateEvent);
 
 // Delete an event
 router.delete('/:id', deleteEvent);

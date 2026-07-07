@@ -651,9 +651,9 @@ function EventModal({ event, onClose, onSubmit }) {
     }
   }
 
-  const prediction = formData.title && formData.category ? 
+  const prediction = formData.title && formData.category && predictAttendance ? 
     predictAttendance(formData, events.filter(e => e.status === 'approved')) : null
-  const approvalPred = formData.title ? predictApprovalSuccess(formData) : null
+  const approvalPred = formData.title && predictApprovalSuccess ? predictApprovalSuccess(formData) : null
   
 
   const handleRemoveExistingImage = (idx) => {

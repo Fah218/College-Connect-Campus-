@@ -24,11 +24,14 @@ export const useAnalyticsStore = create((set) => ({
 
   fetchClubHeadAnalytics: async (clubId) => {
     if (!clubId || clubId === 'undefined') return;
+    console.log(`[analyticsStore] [${new Date().toISOString()}] set(isLoading: true). Action: fetchClubHeadAnalytics start`);
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/clubhead?clubId=${clubId}`);
+      console.log(`[analyticsStore] [${new Date().toISOString()}] set(clubHeadAnalytics: response.data). Action: fetchClubHeadAnalytics success (Replacing)`);
       set({ clubHeadAnalytics: response.data, isLoading: false });
     } catch (error) {
+      console.log(`[analyticsStore] [${new Date().toISOString()}] set(error). Action: fetchClubHeadAnalytics error`);
       set({ error: error.response?.data?.message || 'Failed to fetch club head analytics', isLoading: false });
     }
   },

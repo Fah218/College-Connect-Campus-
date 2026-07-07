@@ -20,7 +20,8 @@ export const useEventStore = create(
         }
         if (isLoading && !force) return;
         
-        console.log("fetchEvents called. Current events count:", get().events.length); set({ isLoading: true, error: null });
+        console.log(`[eventStore] [${new Date().toISOString()}] set(isLoading: true). Prev events: ${get().events.length}. New: ${get().events.length}. Action: fetchEvents start`); 
+        set({ isLoading: true, error: null });
         try {
           const response = await axios.get('http://localhost:5001/api/events');
           const dbEvents = response.data.events.map(dbEvent => ({
@@ -32,7 +33,8 @@ export const useEventStore = create(
             date: dbEvent.date || dbEvent.startDate,
             time: dbEvent.time || dbEvent.startTime
           }));
-          console.log("fetchEvents success. Fetched count:", dbEvents.length); set({ events: dbEvents, isLoading: false, lastFetched: Date.now() });
+          console.log(`[eventStore] [${new Date().toISOString()}] set(events: dbEvents). Prev events: ${get().events.length}. New: ${dbEvents.length}. Action: fetchEvents success (Replacing)`); 
+          set({ events: dbEvents, isLoading: false, lastFetched: Date.now() });
         } catch (error) {
           console.error("Error fetching events from DB:", error);
           set({ isLoading: false, error: error.message });
@@ -58,7 +60,6 @@ export const useEventStore = create(
           const fd = new FormData();
           fd.append('eventData', JSON.stringify(payload));
           if (event.bannerImageFile) fd.append('bannerImage', event.bannerImageFile);
-          if (event.additionalImageFile) fd.append('additionalImages', event.additionalImageFile);
           if (event.additionalImageFiles) {
             event.additionalImageFiles.forEach(file => fd.append('additionalImages', file));
           }
@@ -66,6 +67,12 @@ export const useEventStore = create(
             fd.append('problemStatementPdf', event.problemStatementPdfFile);
           }
           
+          console.log("---- FormData being sent ----");
+          for (const pair of fd.entries()) {
+              console.log(pair[0], pair[1] instanceof File ? `File: ${pair[1].name} (${pair[1].type})` : pair[1]);
+          }
+          console.log("-----------------------------");
+
           const response = await axios.post('http://localhost:5001/api/events/create', fd, {
             onUploadProgress: (progressEvent) => {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -95,7 +102,8 @@ export const useEventStore = create(
           return newEvent
         } catch (error) {
           console.error("Error saving event to database:", error);
-          throw error;
+          const errMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+          throw new Error(errMsg);
         }
       },
       
@@ -118,19 +126,18 @@ export const useEventStore = create(
           });
 
           // If the event has a MongoDB ObjectId (string), save to backend
-if (typeof id === 'string') {
+          if (typeof id === 'string') {
             const fd = new FormData();
             
             // Extract file objects
             const bannerFile = updates.bannerImageFile;
-            const additionalFiles = updates.additionalImageFile;
-            const additionalImageFilesArr = updates.additionalImageFiles; // note this is often an array or a single file
             const pdfFile = updates.problemStatementPdfFile;
+            const additionalImageFilesArr = updates.additionalImageFiles;
             
-            // Remove file objects from updates to avoid circular JSON
+            // Remove file objects from payload
             const cleanUpdates = { ...updates, status: 'pending' };
             delete cleanUpdates.bannerImageFile;
-            delete cleanUpdates.additionalImageFile;
+            delete cleanUpdates.additionalImageFile; // keep delete for safety
             delete cleanUpdates.additionalImageFiles;
             delete cleanUpdates.problemStatementPdfFile;
             
@@ -138,13 +145,7 @@ if (typeof id === 'string') {
             
             if (bannerFile) fd.append('bannerImage', bannerFile);
             if (pdfFile) fd.append('problemStatementPdf', pdfFile);
-            if (additionalFiles && additionalFiles.length) {
-              for(let i=0; i<additionalFiles.length; i++) {
-                fd.append('additionalImages', additionalFiles[i]);
-              }
-            } else if (additionalFiles) {
-              fd.append('additionalImages', additionalFiles);
-            }
+            
             if (additionalImageFilesArr) {
               for(let i=0; i<additionalImageFilesArr.length; i++) {
                 fd.append('additionalImages', additionalImageFilesArr[i]);
@@ -186,7 +187,8 @@ if (typeof id === 'string') {
           }
         } catch (error) {
           console.error("Error updating event:", error);
-          throw error;
+          const errMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+          throw new Error(errMsg);
         }
       },
       

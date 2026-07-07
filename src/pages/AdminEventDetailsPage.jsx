@@ -24,11 +24,17 @@ export default function AdminEventDetailsPage() {
   const [viewerImages, setViewerImages] = useState(null)
   const [viewerIndex, setViewerIndex] = useState(0)
 
+  console.log("[AdminEventDetailsPage] mounted");
+  console.log("[AdminEventDetailsPage] params", useParams());
+  console.log("[AdminEventDetailsPage] event", event);
+
   useEffect(() => {
+    console.log("[AdminEventDetailsPage] useEffect (fetchEvents)");
     if (!events.length) fetchEvents()
   }, [events.length, fetchEvents])
 
   useEffect(() => {
+    console.log("[AdminEventDetailsPage] useEffect (findEvent)", { eventsLength: events.length, id });
     if (events.length > 0) {
       const foundEvent = events.find(e => e._id === id || e.id === id)
       setEvent(foundEvent)
@@ -36,6 +42,7 @@ export default function AdminEventDetailsPage() {
   }, [events, id])
 
   useEffect(() => {
+    console.log("[AdminEventDetailsPage] useEffect (fetchRegistrations)", { id });
     if (id) fetchEventRegistrations(id)
   }, [id, fetchEventRegistrations])
 

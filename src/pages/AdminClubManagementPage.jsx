@@ -261,7 +261,7 @@ export default function AdminClubManagementPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button 
-                            onClick={() => navigate(`/admin/events/${event._id}`)}
+                            onClick={() => navigate(`/events/${event._id}`)}
                             className="text-primary-600 hover:text-primary-800 font-medium text-sm bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors"
                           >
                             View

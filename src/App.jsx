@@ -23,6 +23,7 @@ import AdminClubManagementPage from './pages/AdminClubManagementPage'
 import AdminEventDetailsPage from './pages/AdminEventDetailsPage'
 
 function App() {
+  console.log("[App] rendered");
   const fetchEvents = useEventStore(state => state.fetchEvents)
   const fetchHackathonData = useHackathonStore(state => state.fetchHackathonData)
   
@@ -75,8 +76,8 @@ function App() {
             <AdminClubManagementPage />
           </ProtectedRoute>
         } />
-        <Route path="/admin/events/:id" element={
-          <ProtectedRoute role="admin">
+        <Route path="/events/:id" element={
+          <ProtectedRoute roles={['admin', 'club_head']}>
             <AdminEventDetailsPage />
           </ProtectedRoute>
         } />

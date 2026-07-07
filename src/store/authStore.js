@@ -11,13 +11,17 @@ export const useAuthStore = create(
       dashboardLayout: {},
       
       login: (userData) => {
+        console.log("[AuthStore] login", { isAuthenticated: true, role: userData?.role });
         // Ensure _id exists to satisfy new strict ObjectId requirement
         if (userData && userData.id && !userData._id) {
           userData._id = userData.id;
         }
         return set({ user: userData, isAuthenticated: true });
       },
-      logout: () => set({ user: null, isAuthenticated: false, notifications: [] }),
+      logout: () => {
+        console.log("[AuthStore] logout", { isAuthenticated: false, role: null });
+        set({ user: null, isAuthenticated: false, notifications: [] });
+      },
       
       updateProfile: (updates) => set((state) => ({
         user: { ...state.user, ...updates }

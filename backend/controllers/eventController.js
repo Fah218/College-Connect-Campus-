@@ -86,11 +86,29 @@ export const createEvent = async (req, res) => {
       event: newEvent
     });
   } catch (error) {
-    console.error('Error creating event:', error);
+    console.error('\n==== ERROR CREATING EVENT ====');
+    console.error('Message:', error.message);
+    console.error('Name:', error.name);
+    console.error('Stack:', error.stack);
+    console.error('req.body:', JSON.stringify(req.body, null, 2));
+    console.error('req.files:', req.files);
+    
+    let errorDetails = {};
+    if (error.name === 'ValidationError') {
+      console.error('Failed Fields:');
+      for (const field in error.errors) {
+        console.error(`- ${field}: ${error.errors[field].message}`);
+        errorDetails[field] = error.errors[field].message;
+      }
+    }
+    console.error('==============================\n');
+
     res.status(500).json({
       success: false,
       message: 'Failed to create event',
-      error: error.message
+      error: error.message,
+      name: error.name,
+      details: errorDetails
     });
   }
 };
