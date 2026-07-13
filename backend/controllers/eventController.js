@@ -24,11 +24,11 @@ export const createEvent = async (req, res) => {
     if (eventData.problemStatementPdf && eventData.problemStatementPdf.startsWith('blob:')) delete eventData.problemStatementPdf;
 
 
-    const uploadToCloudinary = async (file) => {
+    const uploadToCloudinary = async (file, resourceType = 'auto') => {
       try {
         const result = await cloudinary.uploader.upload(file.path, {
           folder: 'college_campus/events',
-          resource_type: 'auto'
+          resource_type: resourceType
         });
         fs.unlinkSync(file.path);
         return { url: result.secure_url, public_id: result.public_id };
@@ -58,7 +58,7 @@ export const createEvent = async (req, res) => {
         }
       }
       if (req.files.problemStatementPdf && req.files.problemStatementPdf.length > 0) {
-        const res = await uploadToCloudinary(req.files.problemStatementPdf[0]);
+        const res = await uploadToCloudinary(req.files.problemStatementPdf[0], 'raw');
         eventData.problemStatementPdf = res.url;
       }
     }
@@ -180,11 +180,11 @@ export const updateEvent = async (req, res) => {
     if (updates.problemStatementPdf && updates.problemStatementPdf.startsWith('blob:')) delete updates.problemStatementPdf;
 
 
-    const uploadToCloudinary = async (file) => {
+    const uploadToCloudinary = async (file, resourceType = 'auto') => {
       try {
         const result = await cloudinary.uploader.upload(file.path, {
           folder: 'college_campus/events',
-          resource_type: 'auto'
+          resource_type: resourceType
         });
         fs.unlinkSync(file.path);
         return { url: result.secure_url, public_id: result.public_id };
@@ -210,7 +210,7 @@ export const updateEvent = async (req, res) => {
         }
       }
       if (req.files.problemStatementPdf && req.files.problemStatementPdf.length > 0) {
-        const res = await uploadToCloudinary(req.files.problemStatementPdf[0]);
+        const res = await uploadToCloudinary(req.files.problemStatementPdf[0], 'raw');
         updates.problemStatementPdf = res.url;
       }
     }

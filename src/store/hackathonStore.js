@@ -143,7 +143,12 @@ export const useHackathonStore = create(
             skills: data.skills || data.requiredSkills || [],
             createdBy: data.createdBy || data.owner?._id || data.owner?.id
           };
-          const response = await axios.post('http://localhost:5001/api/teams/request', payload);
+          console.log("TEAM REQUEST PAYLOAD", payload);
+          const response = await axios.post('http://localhost:5001/api/teams/request', payload, {
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
           let dbReq = response.data.teamRequest;
           
           // Format it to match the UI normalizer
@@ -226,8 +231,12 @@ export const useHackathonStore = create(
             linkedinLink: details.linkedin || '',
             message: message || 'I would like to join your team.'
           };
-          
-          const response = await axios.post('http://localhost:5001/api/teams/join', payload);
+          console.log("JOIN REQUEST PAYLOAD", payload);
+          const response = await axios.post('http://localhost:5001/api/teams/join', payload, {
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
           const dbReq = response.data.joinRequest;
 
           const jr = {

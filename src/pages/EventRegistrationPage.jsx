@@ -364,7 +364,11 @@ export default function EventRegistrationPage() {
         currentMembers: []
       }
 
-      await axios.post('http://localhost:5001/api/teams/request', payload)
+      await axios.post('http://localhost:5001/api/teams/request', payload, {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
       await fetchHackathonData()
       setShowOfflineTeamForm(false)
       addNotification({ title: 'Team Created', message: 'Offline team created successfully.', priority: 'success' })

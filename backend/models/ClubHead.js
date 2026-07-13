@@ -8,7 +8,7 @@ const clubHeadSchema = new mongoose.Schema({
   clubDescription: { type: String },
   profileImage: { type: String },
   contactNumber: { type: String },
-  studentId: { type: String, required: true },
+
   role: { type: String, default: 'ClubHead' },
   department: { type: String },
   designation: { type: String },

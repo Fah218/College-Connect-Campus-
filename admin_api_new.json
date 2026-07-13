@@ -1,0 +1,395 @@
+{
+  "dashboard": {
+    "totalEvents": 21,
+    "approved": 14,
+    "totalRegistrations": 29,
+    "totalParticipants": 47,
+    "registeredTeams": 20,
+    "clubs": [
+      {
+        "id": "69b7d70bf6c3cedafb6005d3",
+        "name": "Kalakarit",
+        "head": "Kartikey Patel",
+        "members": 0,
+        "events": 0,
+        "status": "Active",
+        "isArchived": false
+      },
+      {
+        "id": "69f73c9393ac6711fb35cb5e",
+        "name": "Tech Club",
+        "head": "Kartikey ",
+        "members": 0,
+        "events": 0,
+        "status": "Active",
+        "isArchived": false
+      },
+      {
+        "id": "6a117dea9de2ce80c3b351cd",
+        "name": "E-Cell",
+        "head": "Lokendra",
+        "members": 10,
+        "events": 4,
+        "status": "Active",
+        "isArchived": false
+      },
+      {
+        "id": "6a135477584cf80b450e0370",
+        "name": "12 Pixels Photography Club",
+        "head": "Himanshu",
+        "members": 7,
+        "events": 5,
+        "status": "Active",
+        "isArchived": false
+      },
+      {
+        "id": "6a428ab478a7f8919cd8a1d9",
+        "name": "CodeChef Chapter",
+        "head": "Vaibhav ",
+        "members": 8,
+        "events": 7,
+        "status": "Active",
+        "isArchived": false
+      }
+    ],
+    "insights": [
+      {
+        "id": "growth",
+        "type": "growth",
+        "title": "Event Growth",
+        "description": "Event creation grew by 425% in the last 30 days (17 new events).",
+        "trend": "up"
+      },
+      {
+        "id": "engagement",
+        "type": "engagement",
+        "title": "Platform Engagement",
+        "description": "29 new registrations in the last 30 days.",
+        "trend": "up"
+      },
+      {
+        "id": "pending",
+        "type": "warning",
+        "title": "Pending Actions",
+        "description": "0 events are currently awaiting your approval.",
+        "trend": "neutral"
+      }
+    ],
+    "chartData": [
+      {
+        "club": "E-Cell",
+        "members": 10
+      },
+      {
+        "club": "CodeChef Chapter",
+        "members": 8
+      },
+      {
+        "club": "12 Pixels Photography Club",
+        "members": 7
+      }
+    ],
+    "monthlyData": [
+      {
+        "month": "May",
+        "events": 3
+      },
+      {
+        "month": "Jun",
+        "events": 8
+      },
+      {
+        "month": "Jul",
+        "events": 10
+      }
+    ],
+    "pending": 0,
+    "rejected": 7
+  },
+  "profile": {
+    "totalUsers": 16,
+    "totalEvents": 21,
+    "totalStudents": 8,
+    "totalClubHeads": 5,
+    "approvalInsights": {
+      "totalRequests": 21,
+      "approved": 14,
+      "rejected": 7,
+      "pending": 0
+    },
+    "totalStudentParticipation": 47,
+    "growthTrend": [
+      {
+        "month": "May",
+        "events": 3
+      },
+      {
+        "month": "Jun",
+        "events": 8
+      },
+      {
+        "month": "Jul",
+        "events": 10
+      }
+    ],
+    "activitySummary": {
+      "recentApprovals": [
+        {
+          "_id": "6a4d42ee23271621373bb5ae",
+          "title": "Web3 Nexus 2026 – Online Web3 Hackathon",
+          "shortDescription": "Build decentralized applications, smart contracts, and innovative Web3 solutions in a 24-hour online hackathon.",
+          "description": "Web3 Nexus 2026 is a 24-hour online hackathon organized by the Blockchain Club in collaboration with the Department of Computer Science. The event invites students to explore the future of decentralized technologies by building secure, scalable, and user-friendly Web3 applications.\n\nParticipants will work in teams to develop decentralized applications (DApps), smart contracts, decentralized finance (DeFi) platforms, NFT marketplaces, DAO solutions, and blockchain-based identity systems. Throughout the hackathon, industry mentors will conduct virtual mentoring sessions, technical workshops, and project reviews.\n\nProjects will be judged on innovation, technical implementation, scalability, security, user experience, and overall impact.\n\nChallenge Tracks\nDecentralized Applications (DApps)\nSmart Contracts\nDeFi Applications\nDAO Governance Tools\nNFT Platforms\nWeb3 Social Platforms\nDecentralized Identity\nOpen Innovation",
+          "startDate": "2026-10-24",
+          "startTime": "10:00",
+          "endDate": "2026-10-25",
+          "endTime": "10:00",
+          "registrationDeadlineDate": "2026-10-20",
+          "registrationDeadlineTime": "23:59",
+          "mode": "Online",
+          "location": "Zoom + Discord Server + GitHub Repository Submission Portal",
+          "category": "Hackathon",
+          "tags": [
+            "Web3",
+            "Blockchain",
+            "Ethereum",
+            "Solidity",
+            "Smart Contracts",
+            "DApps",
+            "DeFi",
+            "DAO",
+            "NFT"
+          ],
+          "contactName": "Prof. Arjun Mehta",
+          "contactEmail": "web3nexus@xyzcollege.edu.in",
+          "contactPhone": "+91 9876543219",
+          "eligibility": "All Students",
+          "participationType": "Team",
+          "maxParticipants": 250,
+          "maxTeamSize": 4,
+          "bannerImage": "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783696106/college_campus/events/yfdsddutaswz7cec3evf.png",
+          "bannerImagePublicId": "college_campus/events/yfdsddutaswz7cec3evf",
+          "additionalImages": [
+            "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783448300/college_campus/events/wkk8mdmybjuieubazhdv.png",
+            "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783696112/college_campus/events/lpixgscwvaetrr6rxnlk.png"
+          ],
+          "additionalImagesPublicIds": [
+            "college_campus/events/wkk8mdmybjuieubazhdv",
+            "college_campus/events/lpixgscwvaetrr6rxnlk"
+          ],
+          "prizePool": "₹80,000 Prize Pool + Swags + Digital Certificates",
+          "teamSizeMin": 2,
+          "teamFormationAllowed": true,
+          "winnerRewards": "Web3 Internship Opportunities, Blockchain Mentorship, Cloud Credits, Developer Grants, Winner Trophies",
+          "problemStatementPdf": "https://res.cloudinary.com/ddszr1sdv/raw/upload/v1783696113/college_campus/events/kgne30b5jllfzam8ujqp.pdf",
+          "domains": "Web3, Blockchain, Smart Contracts, DApps, DeFi, DAO, NFT",
+          "competitionType": "",
+          "rules": "",
+          "speakerName": "",
+          "speakerDesignation": "",
+          "organization": "",
+          "certificateProvided": false,
+          "seminarTopic": "",
+          "clubName": "CodeChef Chapter",
+          "status": "approved",
+          "createdAt": "2026-07-07T18:18:22.871Z",
+          "updatedAt": "2026-07-11T18:30:19.857Z"
+        },
+        {
+          "_id": "6a47f73018c25fe6205c16a5",
+          "title": "DesignSprint 2026 – UI/UX Design Hackathon",
+          "shortDescription": "Design intuitive and visually stunning digital experiences by solving real-world user experience challenges in this UI/UX hackathon.",
+          "description": "DesignSprint 2026 is an 8-hour UI/UX Design Hackathon organized by the Design Club in collaboration with the Department of Computer Science. The event brings together aspiring designers, creative thinkers, and product enthusiasts to solve real-world problems through user-centered design.\n\nParticipants will work individually or in teams to research users, create wireframes, design high-fidelity interfaces, and build interactive prototypes using Figma or other design tools. Projects will be evaluated based on creativity, usability, accessibility, and design thinking.\n\nChallenge Tracks\nMobile App UI/UX\nWeb Application Design\nFinTech Experience Design\nHealthcare Applications\nEdTech Platforms\nSmart Campus Solutions\nAI Product Interfaces\nAccessibility & Inclusive Design",
+          "startDate": "2026-09-19",
+          "startTime": "09:00",
+          "endDate": "2026-09-19",
+          "endTime": "17:00",
+          "registrationDeadlineDate": "2026-09-15",
+          "registrationDeadlineTime": "23:59",
+          "mode": "Offline",
+          "location": "Innovation Lab & Design Studio, XYZ College Campus",
+          "category": "Hackathon",
+          "tags": [
+            "UI/UX",
+            "Figma",
+            "Product Design",
+            "Design Thinking",
+            "User Experience",
+            "Wireframing",
+            "Prototyping",
+            "Accessibility"
+          ],
+          "contactName": "Prof. Ananya Sharma",
+          "contactEmail": "designsprint@xyzcollege.edu.in",
+          "contactPhone": "+91 9876543217",
+          "eligibility": "All Students",
+          "participationType": "Team",
+          "maxParticipants": 147,
+          "maxTeamSize": 4,
+          "bannerImage": "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783101224/college_campus/events/wlxcofvb5kp8s2fmr7o1.png",
+          "bannerImagePublicId": "college_campus/events/wlxcofvb5kp8s2fmr7o1",
+          "additionalImages": [
+            "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783101232/college_campus/events/e4ldso2rtigkkdz1w6on.png"
+          ],
+          "additionalImagesPublicIds": [
+            "college_campus/events/e4ldso2rtigkkdz1w6on"
+          ],
+          "prizePool": "₹40,000 Prize Pool + Swags + Certificates",
+          "teamSizeMin": 2,
+          "teamFormationAllowed": true,
+          "winnerRewards": "UI/UX Internship Opportunities, Portfolio Review Sessions, Industry Mentorship, Design Tool Licenses, Winner Trophies",
+          "problemStatementPdf": "",
+          "domains": "UI Design, UX Research, Product Design, Design Systems, Mobile UI, Web UI, Accessibility",
+          "competitionType": "",
+          "rules": "",
+          "speakerName": "",
+          "speakerDesignation": "",
+          "organization": "",
+          "certificateProvided": false,
+          "seminarTopic": "",
+          "clubName": "CodeChef Chapter",
+          "status": "approved",
+          "createdAt": "2026-07-03T17:53:52.863Z",
+          "updatedAt": "2026-07-04T14:22:28.146Z"
+        },
+        {
+          "_id": "6a46a4d16d4e051c9aa032cf",
+          "title": "BlockForge 2026 – Blockchain Innovation Hackathon",
+          "shortDescription": "Build secure, decentralized applications and Web3 solutions that solve real-world problems using blockchain technology.",
+          "description": "BlockForge 2026 is a 12-hour blockchain hackathon organized by the Blockchain Club in collaboration with the Department of Computer Science. The event provides students with an opportunity to explore decentralized technologies by building innovative blockchain-based applications.\n\nParticipants will work in teams to design and develop decentralized applications (DApps), smart contracts, digital identity systems, supply chain solutions, and Web3 platforms. Industry mentors and faculty members will guide participants throughout the hackathon, followed by project demonstrations and judging by a panel of experts.\n\nChallenge Tracks\nDecentralized Applications (DApps)\nSmart Contracts\nDigital Identity & Authentication\nSupply Chain Management\nHealthcare Records\nDeFi (Decentralized Finance)\nNFT & Digital Assets\nOpen Innovation",
+          "startDate": "2026-10-11",
+          "startTime": "09:00",
+          "endDate": "2026-10-11",
+          "endTime": "21:00",
+          "registrationDeadlineDate": "2026-10-07",
+          "registrationDeadlineTime": "23:59",
+          "mode": "Online",
+          "location": "Innovation Hub & Blockchain Lab, XYZ College Campus",
+          "category": "Hackathon",
+          "tags": [
+            "Blockchain",
+            "Web3",
+            "Ethereum",
+            "Solidity",
+            "Smart Contracts",
+            "DApps",
+            "DeFi",
+            "Cryptography"
+          ],
+          "contactName": "Prof. Aditya Verma",
+          "contactEmail": "blockforge@xyzcollege.edu.in",
+          "contactPhone": "+91 9876543216",
+          "eligibility": "All Students",
+          "participationType": "Team",
+          "maxParticipants": 178,
+          "maxTeamSize": 4,
+          "bannerImage": "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783014606/college_campus/events/b8azahqaxfxbvvxijjgy.png",
+          "bannerImagePublicId": "college_campus/events/b8azahqaxfxbvvxijjgy",
+          "additionalImages": [
+            "https://res.cloudinary.com/ddszr1sdv/image/upload/v1783014608/college_campus/events/mvplbtezbkhwbpfycqe7.png"
+          ],
+          "additionalImagesPublicIds": [
+            "college_campus/events/mvplbtezbkhwbpfycqe7"
+          ],
+          "prizePool": "₹70,000 Prize Pool + Swags + Certificates",
+          "teamSizeMin": 2,
+          "teamFormationAllowed": true,
+          "winnerRewards": "Blockchain Internship Opportunities, Industry Mentorship, Cloud Credits, Web3 Development Certification Vouchers, Winner Trophies",
+          "problemStatementPdf": "",
+          "domains": "Blockchain, Web3, Smart Contracts, Decentralized Applications, Cryptography, DeFi",
+          "competitionType": "",
+          "rules": "",
+          "speakerName": "",
+          "speakerDesignation": "",
+          "organization": "",
+          "certificateProvided": false,
+          "seminarTopic": "",
+          "clubName": "CodeChef Chapter",
+          "status": "approved",
+          "createdAt": "2026-07-02T17:50:09.390Z",
+          "updatedAt": "2026-07-02T18:23:44.821Z"
+        }
+      ],
+      "recentRejections": [
+        {
+          "_id": "6a510c80932be174452fa735",
+          "title": "Test PDF Corruption",
+          "shortDescription": "Test",
+          "description": "Test",
+          "registrationDeadlineDate": "2026-12-31",
+          "registrationDeadlineTime": "12:00",
+          "mode": "Offline",
+          "location": "Test Location",
+          "category": "Workshop",
+          "tags": [],
+          "contactName": "Test User",
+          "contactEmail": "test@test.com",
+          "contactPhone": "1234567890",
+          "eligibility": "All",
+          "participationType": "Individual",
+          "additionalImages": [],
+          "additionalImagesPublicIds": [],
+          "teamFormationAllowed": true,
+          "problemStatementPdf": "https://res.cloudinary.com/ddszr1sdv/raw/upload/v1783696511/college_campus/events/sz5cfxmxiaibctxzd0yw.pdf",
+          "certificateProvided": false,
+          "clubName": "Test Club",
+          "status": "rejected",
+          "createdAt": "2026-07-10T15:15:12.498Z",
+          "updatedAt": "2026-07-11T18:32:55.905Z"
+        },
+        {
+          "_id": "6a510c3295110ed42ee73c57",
+          "title": "Test PDF Corruption",
+          "shortDescription": "Test",
+          "description": "Test",
+          "registrationDeadlineDate": "2026-12-31",
+          "registrationDeadlineTime": "12:00",
+          "mode": "Offline",
+          "location": "Test Location",
+          "category": "Workshop",
+          "tags": [],
+          "contactName": "Test User",
+          "contactEmail": "test@test.com",
+          "contactPhone": "1234567890",
+          "eligibility": "All",
+          "participationType": "Individual",
+          "additionalImages": [],
+          "additionalImagesPublicIds": [],
+          "teamFormationAllowed": true,
+          "problemStatementPdf": "https://res.cloudinary.com/ddszr1sdv/raw/upload/v1783696433/college_campus/events/ukbkwxaibp5iqrsixk3j.pdf",
+          "certificateProvided": false,
+          "clubName": "Test Club",
+          "status": "rejected",
+          "createdAt": "2026-07-10T15:13:54.659Z",
+          "updatedAt": "2026-07-11T18:32:51.160Z"
+        },
+        {
+          "_id": "6a4d467c2e92bd9586d8352d",
+          "title": "Test",
+          "shortDescription": "Test",
+          "description": "Test",
+          "registrationDeadlineDate": "2026-12-31",
+          "registrationDeadlineTime": "12:00",
+          "mode": "Offline",
+          "location": "Test Location",
+          "category": "Workshop",
+          "tags": [],
+          "contactName": "Test User",
+          "contactEmail": "test@test.com",
+          "contactPhone": "1234567890",
+          "eligibility": "All",
+          "participationType": "Individual",
+          "additionalImages": [],
+          "additionalImagesPublicIds": [],
+          "teamFormationAllowed": true,
+          "problemStatementPdf": "https://res.cloudinary.com/ddszr1sdv/raw/upload/v1783449211/college_campus/events/btzb1oo3c7ozcm4jgmfn.pdf",
+          "certificateProvided": false,
+          "clubName": "Test Club",
+          "status": "rejected",
+          "createdAt": "2026-07-07T18:33:32.581Z",
+          "updatedAt": "2026-07-10T15:08:58.525Z"
+        }
+      ],
+      "clubsManaged": 5
+    }
+  }
+}

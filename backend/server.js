@@ -45,10 +45,6 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 // Global error handler
 app.use((err, req, res, next) => {
     console.error('GLOBAL ERROR MIDDLEWARE CAUGHT AN ERROR:');
@@ -57,4 +53,8 @@ app.use((err, req, res, next) => {
     console.error('Field:', err.field);
     console.error('Full Error:', err);
     res.status(500).json({ error: err.message, name: err.name, field: err.field });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

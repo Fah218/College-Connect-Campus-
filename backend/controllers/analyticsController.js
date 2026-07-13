@@ -28,69 +28,150 @@ export const getAdminAnalytics = async (req, res) => {
     const adminCount = await Admin.countDocuments();
     const totalUsers = studentCount + clubHeadCount + adminCount;
 
-    let allEvents = await Event.find({}).sort({ createdAt: -1 }).lean();
-    const totalEvents = allEvents.length;
-    const approvedEvents = allEvents.filter(e => e.status === 'approved');
-    const pendingEvents = allEvents.filter(e => e.status === 'pending');
-    const rejectedEvents = allEvents.filter(e => e.status === 'rejected');
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const allRegistrations = await Registration.find({}).populate('teamId').lean();
-    const totalRegistrations = allRegistrations.length;
+    const [
+      totalEvents,
+      approvedEventsCount,
+      pendingEventsCount,
+      rejectedEventsCount,
+      recentEvents,
+      recentApprovals,
+      recentRejections,
+      totalRegistrations,
+      recentRegs,
+      regStats
+    ] = await Promise.all([
+      Event.countDocuments(),
+      Event.countDocuments({ status: 'approved' }),
+      Event.countDocuments({ status: 'pending' }),
+      Event.countDocuments({ status: 'rejected' }),
+      Event.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Event.find({ status: 'approved' }).select('_id title clubName status createdAt').sort({ createdAt: -1 }).limit(3).lean(),
+      Event.find({ status: 'rejected' }).select('_id title clubName status createdAt').sort({ createdAt: -1 }).limit(3).lean(),
+      Registration.countDocuments(),
+      Registration.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Registration.aggregate([
+        {
+          $lookup: {
+            from: 'teamrequests',
+            localField: 'teamId',
+            foreignField: '_id',
+            as: 'team'
+          }
+        },
+        { $unwind: { path: '$team', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: null,
+            totalParticipants: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$participationType', 'Individual'] },
+                  1,
+                  {
+                    $cond: [
+                      { $eq: ['$participationType', 'Team'] },
+                      {
+                        $cond: [
+                          { $ifNull: ['$team', false] },
+                          {
+                            $add: [
+                              1, 
+                              { $size: { $ifNull: ['$team.currentMembers', []] } },
+                              { $size: { $ifNull: ['$team.offlineMembers', []] } }
+                            ]
+                          },
+                          0
+                        ]
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            },
+            registeredTeams: {
+              $sum: { $cond: [{ $eq: ['$participationType', 'Team'] }, 1, 0] }
+            }
+          }
+        }
+      ])
+    ]);
 
-    let totalParticipants = 0;
-    allRegistrations.forEach(reg => {
-      if (reg.participationType === 'Individual') totalParticipants += 1;
-      else if (reg.participationType === 'Team' && reg.teamId) {
-        totalParticipants += 1 + (reg.teamId.currentMembers?.length || 0) + (reg.teamId.offlineMembers?.length || 0);
-      }
-    });
-
-    const registeredTeams = allRegistrations.filter(r => r.participationType === 'Team').length;
+    const totalParticipants = regStats.length > 0 ? regStats[0].totalParticipants : 0;
+    const registeredTeams = regStats.length > 0 ? regStats[0].registeredTeams : 0;
 
     // 1. Club Management Data (Clubs List)
     const clubHeads = await ClubHead.find({}).lean();
-    const clubDataMap = {};
     
-    for (const ch of clubHeads) {
-      if (!ch.clubName) continue;
-      const cName = ch.clubName.trim().toLowerCase();
-      
-      const clubEvents = allEvents.filter(e => (e.clubName || '').trim().toLowerCase() === cName).map(e => String(e._id));
-      const uniqueStudents = new Set();
-      const clubRegs = allRegistrations.filter(r => clubEvents.includes(String(r.eventId._id || r.eventId)));
-      
-      for (const reg of clubRegs) {
-        if (reg.studentId) uniqueStudents.add(String(reg.studentId._id || reg.studentId));
-        if (reg.teamId) {
-           if (reg.teamId.createdBy) uniqueStudents.add(String(reg.teamId.createdBy._id || reg.teamId.createdBy));
-           if (reg.teamId.currentMembers) {
-              reg.teamId.currentMembers.forEach(mId => uniqueStudents.add(String(mId._id || mId)));
-           }
+    const eventCountsByClub = await Event.aggregate([
+      { $group: { _id: { $toLower: { $trim: { input: "$clubName" } } }, count: { $sum: 1 } } }
+    ]);
+    const eventCountMap = {};
+    eventCountsByClub.forEach(e => {
+      if (e._id) eventCountMap[e._id] = e.count;
+    });
+
+    const studentCountsByClub = await Registration.aggregate([
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event'
+        }
+      },
+      { $unwind: '$event' },
+      {
+        $lookup: {
+          from: 'teamrequests',
+          localField: 'teamId',
+          foreignField: '_id',
+          as: 'team'
+        }
+      },
+      { $unwind: { path: '$team', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          clubName: '$event.clubName',
+          studentArray: { $cond: [{ $ifNull: ['$studentId', false] }, ['$studentId'], []] },
+          teamCreator: { $cond: [{ $ifNull: ['$team.createdBy', false] }, ['$team.createdBy'], []] },
+          teamMembers: { $cond: [{ $ifNull: ['$team.currentMembers', false] }, '$team.currentMembers', []] }
+        }
+      },
+      {
+        $project: {
+          clubName: 1,
+          membersArray: { $setUnion: ['$studentArray', '$teamCreator', '$teamMembers'] }
+        }
+      },
+      { $unwind: '$membersArray' },
+      {
+        $group: {
+          _id: { $toLower: { $trim: { input: '$clubName' } } },
+          uniqueMembers: { $addToSet: { $toString: '$membersArray' } }
         }
       }
+    ]);
+    const studentCountMap = {};
+    studentCountsByClub.forEach(c => {
+      if (c._id) studentCountMap[c._id] = c.uniqueMembers.length;
+    });
 
-      if (!clubDataMap[cName]) {
-        clubDataMap[cName] = {
-          id: ch._id,
-          name: ch.clubName,
-          head: ch.name,
-          members: uniqueStudents.size, // Calculated actual unique members
-          events: 0,
-          status: ch.status || 'Active',
-          isArchived: ch.isArchived || false
-        };
-      }
-    }
-
-    // Add event counts to clubs ONLY if they exist in DB
-    for (const event of allEvents) {
-      const cName = (event.clubName || '').trim().toLowerCase();
-      if (cName && clubDataMap[cName]) {
-        clubDataMap[cName].events += 1;
-      }
-    }
-
-    const clubs = Object.values(clubDataMap);
+    const clubs = clubHeads.map(ch => {
+      const cName = (ch.clubName || '').trim().toLowerCase();
+      return {
+        id: ch._id,
+        name: ch.clubName,
+        head: ch.name,
+        members: studentCountMap[cName] || 0,
+        events: eventCountMap[cName] || 0,
+        status: ch.status || 'Active',
+        isArchived: ch.isArchived || false
+      };
+    });
 
     // 2. Chart Data (Most Active Clubs) - Pure MongoDB Aggregation
     const chartDataAgg = await Registration.aggregate([
@@ -149,15 +230,9 @@ export const getAdminAnalytics = async (req, res) => {
     const chartData = chartDataAgg.filter(c => c.members > 0 && c.club);
 
     // 3. Platform Insights (Dynamic)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const recentEvents = allEvents.filter(e => new Date(e.createdAt) >= thirtyDaysAgo).length;
-    const oldEvents = allEvents.length - recentEvents;
+    const oldEvents = totalEvents - recentEvents;
     const growthRate = oldEvents === 0 ? (recentEvents * 100) : Math.round((recentEvents / oldEvents) * 100);
 
-    const recentRegs = allRegistrations.filter(r => new Date(r.createdAt) >= thirtyDaysAgo).length;
-    
     const insights = [
       {
         id: 'growth',
@@ -177,8 +252,8 @@ export const getAdminAnalytics = async (req, res) => {
         id: 'pending',
         type: 'warning',
         title: 'Pending Actions',
-        description: `${pendingEvents.length} events are currently awaiting your approval.`,
-        trend: pendingEvents.length > 5 ? 'down' : 'neutral'
+        description: `${pendingEventsCount} events are currently awaiting your approval.`,
+        trend: pendingEventsCount > 5 ? 'down' : 'neutral'
       }
     ];
 
@@ -204,7 +279,7 @@ export const getAdminAnalytics = async (req, res) => {
     res.status(200).json({
       dashboard: {
         totalEvents,
-        approved: approvedEvents.length,
+        approved: approvedEventsCount,
         totalRegistrations,
         totalParticipants,
         registeredTeams,
@@ -212,8 +287,8 @@ export const getAdminAnalytics = async (req, res) => {
         insights,
         chartData,
         monthlyData,
-        pending: pendingEvents.length,
-        rejected: rejectedEvents.length
+        pending: pendingEventsCount,
+        rejected: rejectedEventsCount
       },
       profile: {
         totalUsers,
@@ -222,15 +297,15 @@ export const getAdminAnalytics = async (req, res) => {
         totalClubHeads: clubHeadCount,
         approvalInsights: {
           totalRequests: totalEvents,
-          approved: approvedEvents.length,
-          rejected: rejectedEvents.length,
-          pending: pendingEvents.length
+          approved: approvedEventsCount,
+          rejected: rejectedEventsCount,
+          pending: pendingEventsCount
         },
         totalStudentParticipation: totalParticipants,
         growthTrend: monthlyData,
         activitySummary: {
-          recentApprovals: approvedEvents.slice(0, 3),
-          recentRejections: rejectedEvents.slice(0, 3),
+          recentApprovals,
+          recentRejections,
           clubsManaged: clubHeadCount
         }
       }
@@ -255,18 +330,11 @@ export const getClubHeadAnalytics = async (req, res) => {
     
     console.log(`[AUDIT] Authenticated User: _id=${clubHead._id}, name=${clubHead.name}, clubName=${clubHead.clubName}`);
 
-    // 3. Fetch events and 4 & 5. Filter by normalized string comparison
-    const allEvents = await Event.find({}).sort({ createdAt: -1 }).lean();
-    let myEvents = allEvents.filter(e => {
-       const eventClubName = (e.clubName || '').trim().toLowerCase();
-       const isMatch = eventClubName === cName;
-       
-       // 6. Log every comparison
-       if (eventClubName) {
-         console.log(`[AUDIT] Auth Club: "${cName}" | Event Club: "${eventClubName}" | Match: ${isMatch}`);
-       }
-       return isMatch;
-    });
+    // 3. Fetch events by normalized string comparison natively in DB
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const myEvents = await Event.find({ 
+      clubName: { $regex: new RegExp(`^\\s*${escapeRegExp(cName)}\\s*$`, 'i') } 
+    }).sort({ createdAt: -1 }).lean();
     
     // 7. Verify length
     console.log(`[AUDIT] Total events found for this club: ${myEvents.length}`);
@@ -341,22 +409,20 @@ export const getStudentAnalytics = async (req, res) => {
 
     const student = await Student.findById(userId).lean();
 
-    const registrations = await Registration.find({
+    const studentTeams = await TeamRequest.find({
+      $or: [
+        { createdBy: userId },
+        { currentMembers: userId }
+      ]
+    }).select('_id').lean();
+    const studentTeamIds = studentTeams.map(t => t._id);
+
+    const studentRegistrations = await Registration.find({
       $or: [
         { studentId: userId },
-        { 'teamId': { $exists: true } }
+        { teamId: { $in: studentTeamIds } }
       ]
     }).populate('teamId').populate('eventId').lean();
-
-    const studentRegistrations = registrations.filter(reg => {
-      if (reg.participationType === 'Individual') return reg.studentId?.toString() === userId.toString();
-      if (reg.participationType === 'Team' && reg.teamId) {
-        if (reg.teamId.createdBy?.toString() === userId.toString()) return true;
-        const members = reg.teamId.currentMembers || [];
-        return members.some(m => m.toString() === userId.toString() || (m._id && m._id.toString() === userId.toString()));
-      }
-      return false;
-    });
 
     const registeredEventsCount = studentRegistrations.length;
     const joinedHackathons = studentRegistrations.filter(reg => reg.eventId?.category === 'Hackathon').length;
@@ -430,8 +496,10 @@ export const getAdminClubAnalytics = async (req, res) => {
     const cName = (clubHead.clubName || '').trim().toLowerCase();
     
     // Fetch events
-    const allEvents = await Event.find({}).lean();
-    const myEvents = allEvents.filter(e => (e.clubName || '').trim().toLowerCase() === cName);
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const myEvents = await Event.find({ 
+      clubName: { $regex: new RegExp(`^\\s*${escapeRegExp(cName)}\\s*$`, 'i') } 
+    }).lean();
     const myEventIds = myEvents.map(e => String(e._id));
 
     const approved = myEvents.filter(e => e.status === 'approved');
@@ -439,7 +507,10 @@ export const getAdminClubAnalytics = async (req, res) => {
     const rejected = myEvents.filter(e => e.status === 'rejected');
 
     // Fetch Registrations
-    const allRegistrations = await Registration.find({}).populate('teamId').lean();
+    const allRegistrations = await Registration.find({})
+      .select('eventId studentId teamId participationType createdAt')
+      .populate('teamId', 'createdBy currentMembers offlineMembers')
+      .lean();
     const clubRegs = allRegistrations.filter(r => myEventIds.includes(String(r.eventId._id || r.eventId)));
 
     let totalParticipants = 0;

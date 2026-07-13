@@ -1,10 +1,11 @@
+import mongoose from 'mongoose';
 import TeamRequest from '../models/TeamRequest.js';
 import JoinRequest from '../models/JoinRequest.js';
 import Student from '../models/Student.js';
 
 export const createTeamRequest = async (req, res) => {
-  console.log("=== createTeamRequest TRIGGERED ===");
-  console.log("Payload:", req.body);
+  console.log("===== createTeamRequest =====");
+  console.log(req.body);
   try {
     const { hackathonId, createdBy, title, description, rolesNeeded, requiredSkills, preferredExperienceLevel, teamSizeLimit, currentMembers, offlineMembers, status } = req.body;
     
@@ -31,9 +32,22 @@ export const createTeamRequest = async (req, res) => {
       status: status || 'open'
     });
     
-    await newTeamRequest.save();
+    console.log("===== TeamRequest.create =====");
+    console.log("Payload sent to MongoDB:", newTeamRequest.toObject());
+    console.log("Model:", TeamRequest.modelName);
+    console.log("Collection:", TeamRequest.collection.name);
+    console.log("Database:", mongoose.connection.name);
+
+    const saved = await newTeamRequest.save();
+    console.log("===== save() result =====", saved._id);
+    console.log("Saved ID:", saved._id);
     
-    const populatedRequest = await TeamRequest.findById(newTeamRequest._id)
+    const verify = await TeamRequest.findById(saved._id);
+    console.log("VERIFY DOCUMENT:", verify);
+    
+    console.log("COUNT:", await TeamRequest.countDocuments());
+    
+    const populatedRequest = await TeamRequest.findById(saved._id)
       .populate('createdBy', 'name email department phone rollNumber')
       .populate('currentMembers', 'name email department phone rollNumber');
 
@@ -152,8 +166,8 @@ export const getTeamRequests = async (req, res) => {
 };
 
 export const createJoinRequest = async (req, res) => {
-  console.log("=== createJoinRequest TRIGGERED ===");
-  console.log("Payload:", req.body);
+  console.log("===== createJoinRequest =====");
+  console.log(req.body);
   try {
     const { teamRequestId, hackathonId, applicantId, applicantName, applicantSkills, githubLink, portfolioLink, linkedinLink, message, status } = req.body;
     
@@ -179,8 +193,8 @@ export const createJoinRequest = async (req, res) => {
 
     const newJoinRequest = new JoinRequest({
       teamRequestId,
-      hackathonId: hackathonId || 'unknown', // fallback
-      applicantId: applicantId || 'unknown', // fallback
+      hackathonId: hackathonId,
+      applicantId: applicantId,
       applicantName: studentProfile ? studentProfile.name : applicantName,
       applicantEmail: studentProfile ? studentProfile.email : undefined,
       applicantPhone: studentProfile ? studentProfile.phone : undefined,
@@ -194,7 +208,20 @@ export const createJoinRequest = async (req, res) => {
       status: status || 'pending'
     });
     
-    await newJoinRequest.save();
+    console.log("===== JoinRequest.create =====");
+    console.log("Payload sent to MongoDB:", newJoinRequest.toObject());
+    console.log("Model:", JoinRequest.modelName);
+    console.log("Collection:", JoinRequest.collection.name);
+    console.log("Database:", mongoose.connection.name);
+
+    const saved = await newJoinRequest.save();
+    console.log("===== save() result =====", saved._id);
+    console.log("Saved ID:", saved._id);
+    
+    const verify = await JoinRequest.findById(saved._id);
+    console.log("VERIFY DOCUMENT:", verify);
+    
+    console.log("COUNT:", await JoinRequest.countDocuments());
 
     // Lock recruitment if the team is still 'open'
     await TeamRequest.findOneAndUpdate(

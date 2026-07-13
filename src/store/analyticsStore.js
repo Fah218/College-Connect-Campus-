@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5001/api/analytics';
 
-export const useAnalyticsStore = create((set) => ({
+export const useAnalyticsStore = create((set, get) => ({
   studentAnalytics: null,
   clubHeadAnalytics: null,
   adminAnalytics: null,
@@ -11,8 +11,9 @@ export const useAnalyticsStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  fetchStudentAnalytics: async (userId) => {
+  fetchStudentAnalytics: async (userId, force = false) => {
     if (!userId || userId === 'undefined') return;
+    if (!force && get().studentAnalytics) return; // Basic caching
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/student?userId=${userId}`);
@@ -22,8 +23,9 @@ export const useAnalyticsStore = create((set) => ({
     }
   },
 
-  fetchClubHeadAnalytics: async (clubId) => {
+  fetchClubHeadAnalytics: async (clubId, force = false) => {
     if (!clubId || clubId === 'undefined') return;
+    if (!force && get().clubHeadAnalytics) return;
     console.log(`[analyticsStore] [${new Date().toISOString()}] set(isLoading: true). Action: fetchClubHeadAnalytics start`);
     set({ isLoading: true, error: null });
     try {
@@ -36,7 +38,8 @@ export const useAnalyticsStore = create((set) => ({
     }
   },
 
-  fetchAdminAnalytics: async () => {
+  fetchAdminAnalytics: async (force = false) => {
+    if (!force && get().adminAnalytics) return;
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/admin`);
@@ -46,8 +49,9 @@ export const useAnalyticsStore = create((set) => ({
     }
   },
 
-  fetchAdminClubAnalytics: async (clubId) => {
+  fetchAdminClubAnalytics: async (clubId, force = false) => {
     if (!clubId || clubId === 'undefined') return;
+    if (!force && get().adminClubAnalytics) return;
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/admin/club/${clubId}`);
