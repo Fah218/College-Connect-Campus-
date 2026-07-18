@@ -102,9 +102,76 @@ export default function HomePage() {
       </section>
       
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>&copy; 2025 CampusConnect. Built for students, by students.</p>
+      <footer className="bg-gray-50 pt-16 pb-8 border-t border-gray-100 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-12">
+            
+            {/* Column 1 - Brand */}
+            <div>
+              <div className="flex items-center gap-2 text-xl font-bold text-primary-600 mb-4">
+                <div className="bg-primary-600 text-white p-1.5 rounded-lg shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                </div>
+                CampusConnect
+              </div>
+              <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                Connecting Students, Clubs, and Campus Opportunities — All in One Place.
+              </p>
+            </div>
+
+            {/* Column 2 - Quick Links */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Quick Links</h4>
+              <ul className="space-y-3 text-gray-500 text-sm">
+                <li><Link to="/" className="hover:text-primary-600 transition-colors">Home</Link></li>
+                <li><Link to="/explore-events" className="hover:text-primary-600 transition-colors">Explore Events</Link></li>
+                <li><Link to="/hackathons" className="hover:text-primary-600 transition-colors">Hackathons</Link></li>
+                <li><Link to="/login" className="hover:text-primary-600 transition-colors">Login</Link></li>
+                <li><Link to="/signup" className="hover:text-primary-600 transition-colors">Sign Up</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 3 - Platform */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Platform</h4>
+              <ul className="space-y-3 text-gray-500 text-sm">
+                <li><Link to="/student" className="hover:text-primary-600 transition-colors">Student Portal</Link></li>
+                <li><Link to="/club-head" className="hover:text-primary-600 transition-colors">Club Head Portal</Link></li>
+                <li><Link to="/admin" className="hover:text-primary-600 transition-colors">Admin Dashboard</Link></li>
+                <li><Link to="/hackathons" className="hover:text-primary-600 transition-colors">Team Finder</Link></li>
+                <li><Link to="/explore-events" className="hover:text-primary-600 transition-colors">Event Registration</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 4 - Platform Highlights */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Platform Highlights</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-lg font-bold text-gray-900">500+</div>
+                  <div className="text-xs text-gray-500">Active Students</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-lg font-bold text-gray-900">50+</div>
+                  <div className="text-xs text-gray-500">Campus Clubs</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-lg font-bold text-gray-900">200+</div>
+                  <div className="text-xs text-gray-500">Events Hosted</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-lg font-bold text-gray-900">30+</div>
+                  <div className="text-xs text-gray-500">Hackathons</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          
+          <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+            <p className="text-gray-500">&copy; 2026 CampusConnect. All rights reserved.</p>
+            <p className="text-gray-400 font-medium tracking-wide">Connecting Students. Empowering Innovation.</p>
+          </div>
         </div>
       </footer>
     </div>

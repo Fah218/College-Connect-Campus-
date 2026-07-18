@@ -12,9 +12,18 @@ import AdminDashboard from './pages/AdminDashboard'
 import HackathonPage from './pages/HackathonPage'
 import HackathonDetails from './pages/HackathonDetails'
 import HackathonTeammateFinder from './pages/HackathonTeammateFinder'
-
 import EventRegistrationPage from './pages/EventRegistrationPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import axios from 'axios'
+
+axios.interceptors.request.use((config) => {
+  const user = useAuthStore.getState().user;
+  if (user && config.url && config.url.includes('/api/analytics/admin')) {
+    config.params = { ...config.params, adminId: user._id };
+  }
+  return config;
+});
+
 import StudentProfilePage from './pages/StudentProfilePage'
 import AdminProfilePage from './pages/AdminProfilePage'
 import ClubHeadProfilePage from './pages/ClubHeadProfilePage'
@@ -85,9 +94,17 @@ function App() {
         <Route path="/explore-events" element={<ExploreEventsPage />} />
         <Route path="/hackathons" element={<HackathonPage />} />
         <Route path="/hackathons/:id" element={<HackathonDetails />} />
-        <Route path="/hackathons/:id/teammates" element={<HackathonTeammateFinder />} />
+        <Route path="/hackathons/:id/teammates" element={
+          <ProtectedRoute role="student">
+            <HackathonTeammateFinder />
+          </ProtectedRoute>
+        } />
 
-        <Route path="/events/:id/register" element={<EventRegistrationPage />} />
+        <Route path="/events/:id/register" element={
+          <ProtectedRoute role="student">
+            <EventRegistrationPage />
+          </ProtectedRoute>
+        } />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

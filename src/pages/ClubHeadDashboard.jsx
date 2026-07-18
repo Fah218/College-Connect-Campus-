@@ -193,7 +193,7 @@ export default function ClubHeadDashboard() {
             onDayClick={(day) => setSelectedDay(isSameDay(selectedDay, day) ? null : day)}
             onMonthPrev={() => { setCalendarDate(subMonths(calendarDate, 1)); setSelectedDay(null) }}
             onMonthNext={() => { setCalendarDate(addMonths(calendarDate, 1)); setSelectedDay(null) }}
-            onEventClick={(evt) => navigate('/admin/events/' + (evt.id || evt._id))}
+            onEventClick={(evt) => navigate('/events/' + (evt.id || evt._id))}
             onCreateOnDay={(day) => {
               setEditingEvent(null)
               setShowModal(true)

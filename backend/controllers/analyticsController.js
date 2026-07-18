@@ -23,6 +23,16 @@ const getEventParticipantsCount = async (eventId) => {
 // @desc    Get admin dashboard & profile analytics
 export const getAdminAnalytics = async (req, res) => {
   try {
+    const adminId = req.query.adminId;
+    if (!adminId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    
+    const adminExists = await Admin.findById(adminId);
+    if (!adminExists) {
+      return res.status(403).json({ message: 'Forbidden: Admins only' });
+    }
+
     const studentCount = await Student.countDocuments();
     const clubHeadCount = await ClubHead.countDocuments();
     const adminCount = await Admin.countDocuments();

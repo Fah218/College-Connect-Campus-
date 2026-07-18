@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { GraduationCap } from 'lucide-react'
+import { GraduationCap, ArrowRight } from 'lucide-react'
 import axios from 'axios'
 
 export default function SignupPage() {
@@ -12,7 +11,7 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     role: 'student',
-    college: 'Tech University',
+    rollNumber: '',
     department: '',
     year: '',
     skills: [],
@@ -63,6 +62,7 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
         role: roleMapping[formData.role],
+        rollNumber: formData.role === 'student' ? formData.rollNumber : undefined,
         department: formData.department,
         year: formData.role === 'student' ? formData.year : undefined,
         skills: formData.role === 'student' ? formData.skills : undefined,
@@ -123,24 +123,38 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white flex items-center justify-center px-4 py-8">
-      <div className="max-w-2xl w-full">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary-600 mb-2">
-            <GraduationCap size={32} />
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-in fade-in duration-500">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link to="/" className="flex justify-center items-center gap-2 group mb-2">
+          <div className="bg-primary-600 text-white p-2 rounded-xl shadow-sm group-hover:scale-105 transition-transform duration-200">
+            <GraduationCap size={28} />
+          </div>
+          <span className="text-2xl font-bold text-gray-900 tracking-tight">
             CampusConnect
-          </Link>
-          <p className="text-gray-600">Create your account</p>
-        </div>
+          </span>
+        </Link>
+        <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+          Create an account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-500">
+          Join your campus community today
+        </p>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-lg border p-8">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-2xl">
+        <div className="bg-white py-8 px-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] sm:rounded-2xl sm:px-10 border border-gray-100">
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
-              {error}
+            <div className="mb-6 p-4 bg-red-50/50 border border-red-100 text-red-600 text-sm rounded-xl flex items-start gap-3">
+              <div className="mt-0.5 shrink-0">
+                <svg className="h-4 w-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="flex bg-gray-100 p-1 rounded-lg mb-8 max-w-md mx-auto">
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-8 max-w-md mx-auto">
             {[
               { id: 'student', label: 'Student' },
               { id: 'club_head', label: 'Club Head' },
@@ -150,97 +164,119 @@ export default function SignupPage() {
                 key={roleType.id}
                 type="button"
                 onClick={() => setFormData({ ...formData, role: roleType.id })}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${formData.role === roleType.id
-                    ? 'bg-white text-primary-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  formData.role === roleType.id
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'
+                }`}
               >
                 {roleType.label}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                  placeholder="John Doe"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Email address <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                  placeholder="name@university.edu"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                  placeholder="••••••••"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                  placeholder="••••••••"
                   required
                 />
               </div>
             </div>
 
             {formData.role === 'student' && (
-              <>
-                <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-6 pt-2">
+                <div className="grid md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Department (optional)
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Roll Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.rollNumber}
+                      onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                      className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                      placeholder="e.g. 21BCE0001"
+                      required={formData.role === 'student'}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Department <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
                       placeholder="Computer Science"
+                      required={formData.role === 'student'}
                     />
                   </div>
+                </div>
 
+                <div className="grid md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Year (optional)
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Year <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <select
                       value={formData.year}
                       onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm appearance-none"
                     >
                       <option value="">Select Year</option>
                       <option value="1st">1st Year</option>
@@ -249,24 +285,36 @@ export default function SignupPage() {
                       <option value="4th">4th Year</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Phone Number <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Skills (optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Skills <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
                     onChange={handleSkillsChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
                     placeholder="React, Python, Machine Learning"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Enter your skills separated by commas</p>
+                  <p className="text-xs text-gray-500 mt-1.5">Separate skills with commas</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Interests (optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Interests <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -274,111 +322,112 @@ export default function SignupPage() {
                       const interests = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
                       setFormData({ ...formData, interests })
                     }}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
                     placeholder="AI, Web Dev, UI/UX"
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile Image (optional)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number (optional)
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
-                      placeholder="+1 (555) 000-0000"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Profile Image <span className="text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="block w-full px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer"
+                  />
                 </div>
-              </>
+              </div>
             )}
 
             {formData.role === 'club_head' && (
-              <div className="space-y-4">
+              <div className="space-y-6 pt-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Club Access Code <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.inviteCode}
                     onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 font-mono tracking-widest"
+                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm font-mono tracking-widest uppercase"
                     placeholder="e.g. ECELL09066"
                     required={formData.role === 'club_head'}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Provided by the administration. Your club name will be automatically assigned.</p>
+                  <p className="text-xs text-gray-500 mt-1.5">Provided by administration. Your club name will be automatically assigned.</p>
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Club Description (optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Club Description <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <textarea
                     value={formData.clubDescription}
                     onChange={(e) => setFormData({ ...formData, clubDescription: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm resize-none"
                     placeholder="Briefly describe the club's mission and activities"
                     rows={3}
                   />
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
+                
+                <div className="grid md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile Image / Logo (optional)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Number (optional)
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Contact Number <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
+                      className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm"
                       placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Profile Image / Logo <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="block w-full px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors duration-200 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer"
                     />
                   </div>
                 </div>
               </div>
             )}
 
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-50"
-            >
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </button>
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              >
+                {loading ? (
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </div>
           </form>
 
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-              Login here
-            </Link>
-          </p>
+          <div className="mt-8 border-t border-gray-100 pt-6">
+            <p className="text-center text-sm text-gray-500">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-500 transition-colors">
+                Sign in here
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
