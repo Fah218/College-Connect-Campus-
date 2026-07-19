@@ -48,7 +48,7 @@ export default function AdminEventDetailsPage() {
 
   useEffect(() => {
     if (event?.clubName) {
-      axios.get('http://localhost:5001/api/auth/club-heads')
+      axios.get('https://college-connect-campus.onrender.com/api/auth/club-heads')
         .then(res => {
           const heads = res.data.clubHeads || []
           const found = heads.find(h => (h.clubName || '').toLowerCase() === event.clubName.toLowerCase())

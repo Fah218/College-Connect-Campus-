@@ -51,7 +51,7 @@ export default function ProfileEditForm({ onCancel }) {
     }
 
     try {
-      const response = await axios.put(`http://localhost:5001/api/auth/update/${user._id}`, {
+      const response = await axios.put(`https://college-connect-campus.onrender.com/api/auth/update/${user._id}`, {
         ...updates,
         role: user.role
       });

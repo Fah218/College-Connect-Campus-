@@ -185,7 +185,7 @@ export default function EventRegistrationPage() {
         joinedVia: 'offline'
       }
       
-      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, {
+      await axios.put(`https://college-connect-campus.onrender.com/api/teams/request/${myTeam._id || myTeam.id}`, {
         offlineMembers: [...(myTeam.offlineMembers || []), newMember]
       })
       await fetchHackathonData()
@@ -209,7 +209,7 @@ export default function EventRegistrationPage() {
       } else {
         payload.currentMembers = (myTeam.currentMembers || []).filter(m => m.id !== memberId && m._id !== memberId);
       }
-      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, payload)
+      await axios.put(`https://college-connect-campus.onrender.com/api/teams/request/${myTeam._id || myTeam.id}`, payload)
       await fetchHackathonData()
     } catch (err) {
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to remove member')
@@ -255,7 +255,7 @@ export default function EventRegistrationPage() {
         });
       }
       
-      await axios.put(`http://localhost:5001/api/teams/request/${myTeam._id || myTeam.id}`, payload)
+      await axios.put(`https://college-connect-campus.onrender.com/api/teams/request/${myTeam._id || myTeam.id}`, payload)
       await fetchHackathonData()
       setEditingMemberId(null)
     } catch (err) {
@@ -364,7 +364,7 @@ export default function EventRegistrationPage() {
         currentMembers: []
       }
 
-      await axios.post('http://localhost:5001/api/teams/request', payload, {
+      await axios.post('https://college-connect-campus.onrender.com/api/teams/request', payload, {
         headers: {
           "Content-Type": "application/json"
         }

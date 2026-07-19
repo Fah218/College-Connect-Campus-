@@ -74,7 +74,7 @@ export default function SignupPage() {
         inviteCode: formData.role === 'club_head' ? formData.inviteCode : undefined,
       };
 
-      const response = await axios.post('http://localhost:5001/api/auth/register', payload);
+      const response = await axios.post('https://college-connect-campus.onrender.com/api/auth/register', payload);
 
       login({
         id: response.data.user._id,

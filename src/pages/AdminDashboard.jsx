@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchClubHeads = async () => {
       try {
-        const res = await fetch('http://localhost:5001/api/auth/club-heads')
+        const res = await fetch('https://college-connect-campus.onrender.com/api/auth/club-heads')
         if (res.ok) {
           const data = await res.json()
           setClubHeads(data)

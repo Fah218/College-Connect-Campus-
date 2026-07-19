@@ -37,7 +37,7 @@ export default function LoginPage() {
         role: roleMapping[role],
       };
 
-      const response = await axios.post('http://localhost:5001/api/auth/login', payload);
+      const response = await axios.post('https://college-connect-campus.onrender.com/api/auth/login', payload);
       
       const userData = {
         id: response.data.user._id,
