@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAnalyticsStore } from '../store/analyticsStore'
 import { useClubStore } from '../store/clubStore'
+import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
 import { 
   ArrowLeft, Users, Calendar, Shield, 
@@ -21,7 +22,12 @@ export default function AdminClubManagementPage() {
   const navigate = useNavigate()
   
   const { adminClubAnalytics, fetchAdminClubAnalytics, isLoading } = useAnalyticsStore()
-  const { toggleArchiveStatus } = useClubStore()
+  const { toggleArchiveStatus, reassignHead } = useClubStore()
+  const { addNotification } = useAuthStore()
+
+  const [showReassignModal, setShowReassignModal] = useState(false)
+  const [newHeadName, setNewHeadName] = useState('')
+  const [newHeadEmail, setNewHeadEmail] = useState('')
 
   useEffect(() => {
     fetchAdminClubAnalytics(id)
@@ -41,8 +47,41 @@ export default function AdminClubManagementPage() {
   const { club, statistics, charts, recentEvents, recentActivity } = adminClubAnalytics
 
   const handleArchiveToggle = async () => {
+    if (club.isArchived) {
+      if (!window.confirm(`Are you sure you want to activate ${club.name}?`)) {
+        return;
+      }
+    }
     await toggleArchiveStatus(club.id, !club.isArchived)
+    addNotification({
+      title: club.isArchived ? 'Club Activated' : 'Club Archived',
+      message: `${club.name} has been ${club.isArchived ? 'activated' : 'archived'} successfully`,
+      priority: 'success'
+    })
     fetchAdminClubAnalytics(id) // Refresh data
+  }
+
+  const handleReassignHeadSubmit = async (e) => {
+    e.preventDefault();
+    if (!newHeadName || !newHeadEmail) return;
+    try {
+      await reassignHead(club.id, newHeadName, newHeadEmail);
+      addNotification({
+        title: 'Club Head Reassigned',
+        message: `${newHeadName} is now the head of ${club.name}`,
+        priority: 'success'
+      });
+      setShowReassignModal(false);
+      setNewHeadName('');
+      setNewHeadEmail('');
+      fetchAdminClubAnalytics(id);
+    } catch (err) {
+      addNotification({
+        title: 'Error',
+        message: 'Failed to reassign club head.',
+        priority: 'high'
+      });
+    }
   }
 
   const exportData = recentEvents.map(e => ({
@@ -124,7 +163,9 @@ export default function AdminClubManagementPage() {
                   <Activity size={18} />
                   {club.isArchived ? 'Activate Club' : 'Archive Club'}
                 </button>
-                <button className="px-6 py-2.5 rounded-xl font-semibold shadow-sm transition-all border bg-white text-primary-600 border-primary-200 hover:bg-primary-50 flex items-center gap-2">
+                <button 
+                  onClick={() => setShowReassignModal(true)}
+                  className="px-6 py-2.5 rounded-xl font-semibold shadow-sm transition-all border bg-white text-primary-600 border-primary-200 hover:bg-primary-50 flex items-center gap-2">
                   <UserPlus size={18} /> Reassign Head
                 </button>
             </div>
@@ -352,6 +393,72 @@ export default function AdminClubManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Reassign Head Modal */}
+      {showReassignModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-lg font-bold text-gray-900">Reassign Club Head</h3>
+              <button 
+                onClick={() => setShowReassignModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleReassignHeadSubmit} className="p-6">
+              <p className="text-sm text-gray-600 mb-6">
+                Assign a new head for <strong>{club.name}</strong>. The new head will assume full control over the club's events and registrations.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">New Head Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={newHeadName}
+                    onChange={(e) => setNewHeadName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">New Head Email</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={newHeadEmail}
+                    onChange={(e) => setNewHeadEmail(e.target.value)}
+                    placeholder="e.g. john@example.com"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-8 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowReassignModal(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl font-semibold border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 rounded-xl font-semibold bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition-colors"
+                >
+                  Confirm Reassignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

@@ -43,3 +43,25 @@ export const toggleArchiveClub = async (req, res) => {
     res.status(500).json({ message: 'Error updating club archive status', error: error.message });
   }
 };
+
+// Reassign a club head (Targets ClubHead)
+export const reassignClubHead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { headName, email } = req.body;
+
+    const club = await ClubHead.findByIdAndUpdate(
+      id,
+      { name: headName, email: email },
+      { new: true }
+    );
+
+    if (!club) {
+      return res.status(404).json({ message: 'Club not found' });
+    }
+
+    res.status(200).json({ message: 'Club head reassigned successfully', club });
+  } catch (error) {
+    res.status(500).json({ message: 'Error reassigning club head', error: error.message });
+  }
+};

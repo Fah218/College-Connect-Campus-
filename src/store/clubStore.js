@@ -27,5 +27,18 @@ export const useClubStore = create((set, get) => ({
       console.error('Error toggling club archive status', error);
       throw error;
     }
+  },
+
+  reassignHead: async (clubId, headName, email) => {
+    try {
+      const response = await axios.put(`http://localhost:5001/api/clubs/${clubId}/reassign`, { headName, email });
+      set(state => ({
+        clubs: state.clubs.map(c => c._id === clubId ? { ...c, name: headName, email: email } : c)
+      }));
+      return response.data.club;
+    } catch (error) {
+      console.error('Error reassigning club head', error);
+      throw error;
+    }
   }
 }));
