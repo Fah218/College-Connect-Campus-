@@ -108,21 +108,21 @@ CampusConnect/
 
 ### 1. Landing Page & Explore
 *(Beautiful, welcoming UI of the home page and the filtering system on the Explore Events page)*
-![Home Page](./screenshots/img1.png)
-![Explore Events](./screenshots/img2.png)
+![Home Page](screenshots/img1.png)
+![Explore Events](screenshots/img2.png)
 
 ### 2. Role-Based Dashboards
 *(Contrast between what a Student sees vs what an Admin sees)*
-![Student Dashboard](./screenshots/img3.png)
-![Admin Dashboard](./screenshots/img4.png)
+![Student Dashboard](screenshots/img3.png)
+![Admin Dashboard](screenshots/img4.png)
 
 ### 3. Analytics & Data Visualization
 *(Data visualization via Recharts in the Club Head or Admin panel)*
-![Analytics Charts](./screenshots/img5.png)
+![Analytics Charts](screenshots/img5.png)
 
 ### 4. Team Formation & Event Details
 *(Detailed event pages and team request UI)*
-![Event Details](./screenshots/img6.png)
+![Event Details](screenshots/img6.png)
 
 ## 🚀 Installation & Running the Project
 
