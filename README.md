@@ -106,26 +106,23 @@ CampusConnect/
 
 ## 📸 Screenshots & Visual Guide
 
-*(Note to Developer: Add screenshots below to make your repository stand out to recruiters and developers! Replace the placeholder text with your actual image links.)*
-
 ### 1. Landing Page & Explore
-*(Showcase the beautiful, welcoming UI of the home page and the filtering system on the Explore Events page)*
-> `![Home Page](./screenshots/home.png)`
-> `![Explore Events](./screenshots/explore.png)`
+*(Beautiful, welcoming UI of the home page and the filtering system on the Explore Events page)*
+![Home Page](./screenshots/img1.png)
+![Explore Events](./screenshots/img2.png)
 
 ### 2. Role-Based Dashboards
-*(Show the contrast between what a Student sees vs what an Admin sees)*
-> `![Student Dashboard](./screenshots/student_dashboard.png)`
-> `![Admin Dashboard](./screenshots/admin_dashboard.png)`
+*(Contrast between what a Student sees vs what an Admin sees)*
+![Student Dashboard](./screenshots/img3.png)
+![Admin Dashboard](./screenshots/img4.png)
 
 ### 3. Analytics & Data Visualization
-*(Highlight the Recharts integration showing Bar/Line charts in the Club Head or Admin panel)*
-> `![Analytics Charts](./screenshots/analytics.png)`
+*(Data visualization via Recharts in the Club Head or Admin panel)*
+![Analytics Charts](./screenshots/img5.png)
 
 ### 4. Team Formation & Event Details
-*(Show the UI where a student requests to join a team, or the detailed view of a Hackathon)*
-> `![Team Formation](./screenshots/team_formation.png)`
-> `![Event Details](./screenshots/event_details.png)`
+*(Detailed event pages and team request UI)*
+![Event Details](./screenshots/img6.png)
 
 ## 🚀 Installation & Running the Project
 
