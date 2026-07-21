@@ -23,7 +23,7 @@ export const useEventStore = create(
         console.log(`[eventStore] [${new Date().toISOString()}] set(isLoading: true). Prev events: ${get().events.length}. New: ${get().events.length}. Action: fetchEvents start`); 
         set({ isLoading: true, error: null });
         try {
-          const response = await axios.get('http://localhost:5001/api/events');
+          const response = await axios.get('https://college-connect-campus.onrender.com/api/events');
           const dbEvents = response.data.events.map(dbEvent => ({
             ...dbEvent,
             id: dbEvent._id,
@@ -73,7 +73,7 @@ export const useEventStore = create(
           }
           console.log("-----------------------------");
 
-          const response = await axios.post('http://localhost:5001/api/events/create', fd, {
+          const response = await axios.post('https://college-connect-campus.onrender.com/api/events/create', fd, {
             onUploadProgress: (progressEvent) => {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               set({ uploadProgress: percentCompleted });
@@ -152,7 +152,7 @@ export const useEventStore = create(
               }
             }
 
-            const response = await axios.put(`http://localhost:5001/api/events/${id}`, fd, {
+            const response = await axios.put(`https://college-connect-campus.onrender.com/api/events/${id}`, fd, {
               onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                 set({ uploadProgress: percentCompleted });
@@ -210,7 +210,7 @@ export const useEventStore = create(
         try {
           // If the event has a MongoDB ObjectId (string), save to backend
           if (typeof id === 'string') {
-            await axios.put(`http://localhost:5001/api/events/${id}`, { status: 'approved' });
+            await axios.put(`https://college-connect-campus.onrender.com/api/events/${id}`, { status: 'approved' });
           }
           set((state) => ({
             events: state.events.map(e => e.id === id ? { ...e, status: 'approved' } : e),
@@ -232,7 +232,7 @@ export const useEventStore = create(
       rejectEvent: async (id, comment, rejector) => {
         try {
           if (typeof id === 'string') {
-            await axios.put(`http://localhost:5001/api/events/${id}`, { 
+            await axios.put(`https://college-connect-campus.onrender.com/api/events/${id}`, { 
               status: 'rejected',
               rejectionComment: comment
             });

@@ -50,8 +50,8 @@ export const useHackathonStore = create(
       fetchHackathonData: async () => {
         try {
           const [teamRes, joinRes] = await Promise.all([
-            axios.get('http://localhost:5001/api/teams/request'),
-            axios.get('http://localhost:5001/api/teams/join')
+            axios.get('https://college-connect-campus.onrender.com/api/teams/request'),
+            axios.get('https://college-connect-campus.onrender.com/api/teams/join')
           ]);
           
           const dbJoinRequests = joinRes.data.joinRequests.map(jr => ({
@@ -144,7 +144,7 @@ export const useHackathonStore = create(
             createdBy: data.createdBy || data.owner?._id || data.owner?.id
           };
           console.log("TEAM REQUEST PAYLOAD", payload);
-          const response = await axios.post('http://localhost:5001/api/teams/request', payload, {
+          const response = await axios.post('https://college-connect-campus.onrender.com/api/teams/request', payload, {
             headers: {
               "Content-Type": "application/json"
             }
@@ -179,7 +179,7 @@ export const useHackathonStore = create(
 
       updateTeamRequest: async (teamRequestId, data) => {
         try {
-          const response = await axios.put(`http://localhost:5001/api/teams/request/${teamRequestId}`, data);
+          const response = await axios.put(`https://college-connect-campus.onrender.com/api/teams/request/${teamRequestId}`, data);
           const updatedDbReq = response.data.data;
           
           set(state => ({
@@ -198,7 +198,7 @@ export const useHackathonStore = create(
 
       deleteTeamRequest: async (teamRequestId) => {
         try {
-          await axios.delete(`http://localhost:5001/api/teams/request/${teamRequestId}`);
+          await axios.delete(`https://college-connect-campus.onrender.com/api/teams/request/${teamRequestId}`);
           set(state => ({
             teamRequests: state.teamRequests.filter(req => req._id !== teamRequestId && req.id !== teamRequestId)
           }));
@@ -232,7 +232,7 @@ export const useHackathonStore = create(
             message: message || 'I would like to join your team.'
           };
           console.log("JOIN REQUEST PAYLOAD", payload);
-          const response = await axios.post('http://localhost:5001/api/teams/join', payload, {
+          const response = await axios.post('https://college-connect-campus.onrender.com/api/teams/join', payload, {
             headers: {
               "Content-Type": "application/json"
             }
@@ -299,7 +299,7 @@ export const useHackathonStore = create(
           const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
           if (!jr) return;
           
-          const response = await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
+          const response = await axios.put(`https://college-connect-campus.onrender.com/api/teams/join/${joinRequestId}/status`, { status: 'accepted' });
           const { joinRequest: updatedJr, teamRequest: updatedTr } = response.data;
           
           set(state => {
@@ -366,7 +366,7 @@ export const useHackathonStore = create(
           const jr = get().joinRequests.find(j => String(j._id) === String(joinRequestId) || String(j.id) === String(joinRequestId));
           if (!jr) return;
 
-          const response = await axios.put(`http://localhost:5001/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
+          const response = await axios.put(`https://college-connect-campus.onrender.com/api/teams/join/${joinRequestId}/status`, { status: 'rejected' });
           const { joinRequest: updatedJr } = response.data;
           
           set(state => {

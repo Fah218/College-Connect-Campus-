@@ -21,7 +21,7 @@ export const useRegistrationStore = create(
         try {
           if (!studentId) return;
 
-          const response = await axios.get(`http://localhost:5001/api/registrations/student/${studentId}`);
+          const response = await axios.get(`https://college-connect-campus.onrender.com/api/registrations/student/${studentId}`);
           
           // Combine individual and team registrations into one list for the student
           // Maps them so we have consistent access to the populated eventId
@@ -40,7 +40,7 @@ export const useRegistrationStore = create(
       registerIndividual: async (eventId, formData, studentId) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await axios.post('http://localhost:5001/api/registrations', {
+          const response = await axios.post('https://college-connect-campus.onrender.com/api/registrations', {
             eventId,
             participationType: 'Individual',
             studentId,
@@ -71,7 +71,7 @@ export const useRegistrationStore = create(
           if (teamId) payload.teamId = teamId;
           if (teamDetails) payload.teamDetails = teamDetails;
 
-          const response = await axios.post('http://localhost:5001/api/registrations', payload);
+          const response = await axios.post('https://college-connect-campus.onrender.com/api/registrations', payload);
 
           set((state) => ({
             registrations: [...state.registrations, response.data.registration],
@@ -87,7 +87,7 @@ export const useRegistrationStore = create(
       fetchEventRegistrations: async (eventId) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await axios.get(`http://localhost:5001/api/registrations/event/${eventId}`);
+          const response = await axios.get(`https://college-connect-campus.onrender.com/api/registrations/event/${eventId}`);
           
           set({ eventRegistrations: response.data.registrations, isLoading: false })
         } catch (error) {
@@ -98,7 +98,7 @@ export const useRegistrationStore = create(
       fetchAdminStats: async () => {
         set({ isLoading: true, error: null })
         try {
-          const response = await axios.get('http://localhost:5001/api/registrations/stats/admin');
+          const response = await axios.get('https://college-connect-campus.onrender.com/api/registrations/stats/admin');
           
           set({ adminStats: response.data, isLoading: false })
         } catch (error) {

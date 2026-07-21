@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5001/api/analytics';
+const API_URL = 'https://college-connect-campus.onrender.com/api/analytics';
 
 export const useAnalyticsStore = create((set, get) => ({
   studentAnalytics: null,
