@@ -106,23 +106,27 @@ CampusConnect/
 
 ## 📸 Screenshots & Visual Guide
 
-### 1. Landing Page & Explore
-*(Beautiful, welcoming UI of the home page and the filtering system on the Explore Events page)*
+### 1. Landing Page & Explore Events
+*(Beautiful, welcoming UI of the home page and the filtering system on the Explore Events page. Users can discover all upcoming hackathons and events seamlessly.)*
 ![Home Page](screenshots/img1.png)
 ![Explore Events](screenshots/img2.png)
 
 ### 2. Role-Based Dashboards
-*(Contrast between what a Student sees vs what an Admin sees)*
+*(Contrast between what a Student sees vs what an Admin sees. Dashboards provide contextual data and quick actions tailored to the user's permissions.)*
 ![Student Dashboard](screenshots/img3.png)
 ![Admin Dashboard](screenshots/img4.png)
+![Admin Event Approvals](screenshots/img7.png)
 
 ### 3. Analytics & Data Visualization
-*(Data visualization via Recharts in the Club Head or Admin panel)*
+*(Data visualization via Recharts in the Club Head or Admin panel, giving organizers real-time insights into registrations and platform engagement.)*
 ![Analytics Charts](screenshots/img5.png)
 
-### 4. Team Formation & Event Details
-*(Detailed event pages and team request UI)*
+### 4. Team Formation & Event Registration
+*(Detailed event pages, team registration flows, and the innovative Teammate Finder where students can request to join teams based on skills.)*
 ![Event Details](screenshots/img6.png)
+![Team Registration Flow](screenshots/img10.png)
+![Teammate Finder - Request to Join](screenshots/img8.png)
+![Teammate Finder - Locked Team](screenshots/img9.png)
 
 ## 🚀 Installation & Running the Project
 
