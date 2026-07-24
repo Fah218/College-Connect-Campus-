@@ -66,11 +66,11 @@ export const useHackathonStore = create(
             portfolioLink: jr.portfolioLink,
             linkedinLink: jr.linkedinLink,
             sender: { 
-              id: jr.applicantId, 
-              name: jr.applicantName, 
+              id: typeof jr.applicantId === 'object' && jr.applicantId !== null ? (jr.applicantId._id || jr.applicantId.id) : jr.applicantId, 
+              name: jr.applicantName || (typeof jr.applicantId === 'object' && jr.applicantId !== null ? jr.applicantId.name : undefined), 
               skills: jr.applicantSkills,
-              department: jr.department,
-              year: jr.year
+              department: typeof jr.applicantId === 'object' && jr.applicantId !== null ? jr.applicantId.department : jr.department,
+              year: typeof jr.applicantId === 'object' && jr.applicantId !== null ? jr.applicantId.year : jr.year
             } // map back to sender for UI compatibility
           }));
 

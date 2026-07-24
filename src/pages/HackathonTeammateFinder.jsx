@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useHackathonStore } from '../store/hackathonStore'
 import { useEventStore } from '../store/eventStore'
@@ -40,6 +40,13 @@ export default function HackathonTeammateFinder() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [skillFilter, setSkillFilter] = useState('')
+
+  // Fix stale state issue: Fetch latest data when opening the Teammate Finder
+  useEffect(() => {
+    if (store.fetchHackathonData) {
+      store.fetchHackathonData()
+    }
+  }, [store.fetchHackathonData])
 
   const cleanId = id?.replace(/^(ev-|st-)/, '')
   const ev = (events || []).find(e => String(e.id) === String(cleanId) && e.category === 'Hackathon')
